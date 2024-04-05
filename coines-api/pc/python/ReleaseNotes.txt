@@ -1,0 +1,9 @@
+COINESPY v0.9.0 - (30-11-2022)
+
+Updates
+* Added below API wrappers for Streaming functionalities
+    - config_streaming() - Sends the streaming settings to the board
+    - start_stop_streaming() - Starts or stops the streaming
+    - read_stream_sensor_data() - Reads the streaming sensor data
+    
+    ____________________________________________________________________________________________________________

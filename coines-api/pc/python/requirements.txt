@@ -1,0 +1,5 @@
+pytest
+pytest-cov
+pytest-html
+flake8
+lizard

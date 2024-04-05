@@ -1,0 +1,255 @@
+﻿COINES v2.8  - (12-07-2023)
+
+Updates
+* Added Coines bridge support for NICLA and app20 boards
+* Added beta version of Coines bridge for app31 board with minimal sanity test done for one sensor(BMA400) examples
+* Updated BMA456,BMI08X,BMP3,BME68x,BMI270,BHY2 API's and examples			
+* Added BMI088_MM,BMP5,BMM350,BMI323 API's and examples	  
+* Removed BMA423,BMI090L API's and examples
+* Added echo_test() API to test communication in coinespy.
+* Added config parameters for Serial com and BLE com in coines_open_comm_intf() API for Windows ( PC only )
+* Added BLE interface support for Windows ( PC only )
+* Added coines_yield to utilize the CPU idle time 
+* Added python bmi08x streaming benchmark test to analyze the data loss
+* Added packet number check to avoid reading duplicate data in interrupt streaming 
+* Added job_queue and multi_buffering library to optimize streaming data loss
+* Added linux and mac OS support for PC target to communicate with coines_bridge
+* Added 2 new APIs
+  - coines_attach_timed_interrupt() - Attaches a timed interrupt to a Multi-IO pin ( MCU only )
+  - coines_detach_timed_interrupt() - Detaches a timed interrupt from a Multi-IO pin ( MCU only )
+* BLE minimum and maximum connection interval is set to 15ms to support both android and iOS.
+* Added streaming API support in coinespy.
+* Added coines support for 'NICLA SENSE ME' board.
+* Added timer counter support for app20
+
+Known limitation:
+* As part of multi-instance, either one of SPI0 or SPI1 bus is allowed to be configured in an application since the external flash occupies other SPI instance already. 
+* In APP30 with PC target we can only read upto 3KB
+* Streaming API's only supported in PC target
+
+
+COINES v2.7 Beta release - (12-05-2022)
+
+Updates
+* Updated datalogger package 1.5.2 with documentation 
+* Updated DD firmware for APP3.0 board
+* Updated BMI090L,BMA423,BMA456,BMI08X,BMP3,BMI270,BME68X,BMM150,BHY2  API's and examples 
+* Added BMA456MM,BMI270-CONTEXT,BMI270-MAXIMUM-FIFO,BMI270-LEGACY  API's and examples 
+* Renamed APP3.0 Board to Application Board 3.0 in MTP.
+* Added MTP and USB/BLE bootloader documentation in COINES document.
+* Removed Zeus references
+* Interface of I2C and SPI read/write APIs are changed as Multi-instance support is added(Only for MCU target).
+  - Use I2C0 / SPI0 bus for selecting sensor's primary interface
+  - Use I2C1 bus for selecting on-board temperature sensor (BLE)
+  - Use SPI1 bus for selecting secondary OIS sensor interface
+* Added beta version of Coines bridge to support serial communication.
+  - Source code - examples\c\coines_bridge_firmware
+  - Binaries - firmware\app3.0\coines_bridge
+  - Development Desktop can communicate with coines bridge over serial connection.
+* Added API for configuring hardware timers.
+
+Known limitation:
+* As part of multi-instance, either one of SPI0 or SPI1 bus is allowed to be configured in an application since the external flash occupies other SPI instance already. 
+	
+COINES v2.6 - (10-07-2021)
+
+Updates
+* Added datalogger package (binary + apk) in ../datalogger. Refer ../datalogger/BST-DHW-AN012-00.pdf for details.
+* Software support is added for W25N02 new flash chip in APP3.0 board for COINES platform ( Not for data logger ).
+* Enabled Accurate timestamps and delays based off a crystal backed RTC timer in APP3.0 for COINES platform. 
+* Updated BMI270,BMA423,BMA456,BME68x and BMI090L API and examples.
+
+Known limitation:
+
+* Using latest GCC version (10 2020-q4-major) gives build error because of invalid path in dependency file.It is a bug in the compiler 
+	-https://bugs.launchpad.net/gcc-arm-embedded/+bug/1922579 
+	-This can be addressed by changing the version to v2.6.0(minimum 4 characters in install folder) or updating the make to the latest version (v4.0 or above) 
+* BMI270 - Auxiliary Support Examples(Mag) has been only tested in APP2.0 due to unavailability APP3.0 Shuttle.
+* Datalogger scripts are tested only on windows 
+* Datalogger does not have app switch feature, after flashing datalogger if user wants to flash coines example or DD firmware,
+  enter Bootloader mode manually and then run the respective command/script to flash.
+* While logging in datalogger , If the device is switched off abruptly or flash is filled , the bin files would be available in internal flash but metadata will not be updated in phone. 
+* Kindly update the testers details according to the data security norms and regulations of your respective country. 
+
+
+____________________________________________________________________________
+
+COINES v2.5 - (26-04-2021)
+
+Updates
+* Updated BMP3,BMA400,BMA423,BMA456,BME68x,BME280,BMI08x,BMM150,BMI160,BMI090L and BMI270 API and examples
+* Added API for
+	- Reading battery status and temperature data.
+	- Resetting device.
+	- Setting LED state.
+	- Configuring BLE name and power.
+* Added Battery service, on enabling notification battery level will be updated every 12 seconds.
+* Added micro second support.
+* Moved sensor-api to examples folder.
+
+Known Issues
+
+* Actual Battery level will be shown only after enabling notification(every 12 seconds), reading before enabling notification 
+	will show 100%
+		- Even when battery is not connected battery status is shown in ble.
+* In APP30 with PC target we can only read upto 2KB 
+* In APP20 I2C fast mode is not supported for fifo examples.
+* Flashing the binary to hardware is failing randomly in LINUX.
+* Copying files to flash using MTP is getting corrupted  like 1 out of 5 times.
+* 0.2% data loss is observed in data_sync_mcu example in bmi090l.
+____________________________________________________________________________
+
+COINES v2.4 - (14-12-2020)
+
+Updates
+* Added environmental sensing service to read temperature data in BLE 
+* Added ble and file handling examples in examples\c.
+* Added Led and button support.
+* Files has been reorganized, major changes are as below
+  -	coinesAPI is renamed to coines-api and sensorAPI to sensor-api 
+  -	Examples(c) are moved to respective sensors inside sensor-api
+  - All examples are made to use coines.mk and examples.mk has been removed
+  - Removed GUI(code editor and code generator)
+* APP3.0 Bootloader's 'iSerial' to actual Device serial number/BLE MAC address
+  - This changes breaks backward compatiblity with older versions of COINES
+  - COINES v2.2 users need to update the file 'examples/examples.mk'
+  - Use the below command to download code
+    --> dfu-util --serial <serial_number> -a RAM -D firmware.bin
+* Added BMI090L,BMM150 API and examples
+* Updated BHy2 API and examples
+* Added example for demonstrating data logging on APP3.0 board's external flash memory
+* Added APP2.0 default bootloader binary and script for easy update
+  - Boards detected as 'BNO-USB stick' by 'app20-flash' can be fixed by this update
+  - Boards with DD2.0 firmware v3.0 and below should use 'bossac' tool from https://github.com/shumatech/BOSSA/releases 
+* Added BLE support in APP3.0 Bootloader (Compatible with nRF5 legacy BLE DFU specification)
+* Updated MTP firmware and flash memory drivers to make use of available 256 MB space
+  - Improved MTP firmware performance ==> Read - 155 kB/s, Write - 300 kB/s
+  - File name character limit increased from 32 to 40
+  - Shrunk MTP firmware size to 19 kB
+  - Show BLE MAC address/serial number in MTP device properties
+* Added BLE support based on Nordic UART service in COINES for APP3.0
+  - Data can sent using APIs like fprintf, fwrite, etc., with `bt_w` as file handle
+    Eg: fprintf(bt_w, "Hello %d", 2020);
+  - Data can be read using APIs like fscanf, fread, etc., with `bt_r` as file handle
+    Eg: fread(data, 1, 4, bt_r); // Reads 4 bytes from BLE
+  - Added 'ble-nus-term.py' ==> PC based tool for interacting with Nordic UART service
+* Added APIs for listing files in APP3.0 Flash memory - opendir,readdir,closedir (POSIX C compatible)
+* Added 3 new APIs (for APP3.0 only) - coines_intf_available, coines_read_intf, coines_write_intf 
+
+Known Limitations
+
+* BHy2 examples supports only APP2.0.
+* ble-nus-term.py 
+	- Works with latest Bluetooth v4.0 USB dongles and recent notebook PCs with Bluetooth. 
+ 	- Tested with CSR8510 dongle in Windows 10 (Build 16299 and above) and Ubuntu 20.04 LTS.
+_____________________________________________________________________________________________________________
+
+COINES v2.2
+
+Updates
+
+* Added Python wrapper for coinesAPI - coinespy (compatible with Development Desktop 2.0 genericAPI)
+* Added APIs for 16-bit SPI read,write for upcoming sensors
+* Included BMI270 examples
+* Package manager (python based) for fetching latest sensorAPI included and integrated with COINES Code Editor
+* Added software support for Application Board 3.0
+_____________________________________________________________________________________________________________
+
+COINES v2.1
+
+Updates
+
+* Fixed SPI communication issue with APP2.0 MCU target
+* Linux and macOS users can now update APP2.0/BNO USB stick firmware with 'app20-flash' tool
+* Fixed APP2.0 flash memory lockout issue (avoid using DD2.0 firmware v3.1-v3.3)
+  - Use "update_bootloader" script in firmware/app2.0/coines_bootloader
+  - Use 'app20-flash' tool to update to the latest firmware (v3.4)
+* Disabled interrupt during I2C transaction to fix periodic data corruption issue
+* Fixed trouble with opening USB serial port of Application Board in Ubuntu 18.04 and latest Debian distros.
+  - Changed USB CDC ACM protocol from V.25TER mode to None
+  - It is not required to stop "ModemManager" service anymore
+* Added coines_delay_usec() to use with new sensorAPI like BMI270
+* Updated 'examples.mk' so that examples can make use of C++/Assembly code (see 'examples/template' for more information)
+* Updated sensorAPI 
+  - BMA400 (v1.5.0 --> v1.5.2)
+  - BME280 (v3.3.4 --> v3.3.7)
+  - BMI08x (v1.2.0 --> v1.4.0)
+  - BMI160 (v3.7.5 --> v3.7.7)
+  - BMP3xx (v1.1.0 --> v1.1.3)
+* BSEC Library updated to 1.4.7.4 (No support for PC targets - Linux and macOS.Run on MCU instead)
+* Included support for unofficial boards - Nüwa
+
+Known Limitations
+
+* Interrupt streaming is limited to 1kHz for example code [using printf()] running directly on APP2.0 MCU [TARGET=MCU_APP20]
+_____________________________________________________________________________________________________________
+
+COINES v2.0
+
+Updates
+
+* COINES examples can be cross-compiled to run on APP2.0 microcontroller !!
+  - Upgrade to latest DD2.0 firmware v3.1 to run examples on MCU 
+   (Use Development Desktop software)
+  - Supports RAM and Flash download
+* Added 3 new APIs
+  - coines_get_millis() - Returns the number of milliseconds passed since the program started (PC and MCU)
+  - coines_attach_interrupt() - Attaches a interrupt to a Multi-IO pin ( MCU only )
+  - coines_detach_interrupt() - Detaches a interrupt from a Multi-IO pin ( MCU only )
+* Usage
+  - Install GNU Embedded Toolchain for ARM
+  - Go to any example and run
+    # mingw32-make TARGET=MCU_APP20 download
+  - Open Serial terminal like PuTTY or Hterm . Connect to the serial port and view the output.
+
+Known Limitations
+
+* Support for MCU target is experimental. 
+* The below APIs work only with PC Target 
+  - coines_config_streaming()
+  - coines_start_stop_streaming()
+  - coines_read_stream_sensor_data()
+  - coines_trigger_timer()
+  Hence polling and interrupt streaming examples work with PC target only.
+  Make use of coines_attach_interrupt() API for MCU target.
+* BHy2 examples are supported only on PC target.
+* BSEC examples are not supported for PC target on macOS (Use MCU target)
+* Autoreconnect of USB devices is required for MCU code download to work correctly.
+  ( USB Device switching during code download - Normal --> USB DFU <---> USB CDC)
+  Hence additional settings needs to configured for use with Virtual Machines 
+  # Oracle VM VirtualBox - Add devices to USB filter
+  # VMWare Workstation   - Not required
+
+For online support,visit https://community.bosch-sensortec.com/t5/Bosch-Sensortec-Community/ct-p/bst_community
+_____________________________________________________________________________________________________________
+
+COINES v1.2
+* Includes 
+	- sensorAPI and examples for,
+        * BMA423 - https://github.com/BoschSensortec/BMA423-Sensor-API
+        * BMA456 - https://github.com/BoschSensortec/BMA456-Sensor-API
+    - COINES Code Editor v1.1
+    - Installer for MacOS
+_____________________________________________________________________________________________________________
+
+COINES v1.1
+
+* Includes coinesAPI,sensorAPI and examples
+	- coinesAPI v1.1
+	- sensorAPI (sourced from https://github.com/BoschSensortec )
+		* BHy1		-  v1.0.4	- https://github.com/BoschSensortec/BHy1_driver_and_MCU_solution
+		* BMA400	-  v1.4.0	- https://github.com/BoschSensortec/BMA400-API
+		* BME280	-  v3.3.4	  https://github.com/BoschSensortec/BME280_driver
+		* BME680	-  v3.5.9	- https://github.com/BoschSensortec/BME680_driver
+		  - BSEC	-  v1.4.6.0	- https://www.bosch-sensortec.com/bst/products/all_products/bsec
+		* BMI08x	-  v1.2.0	- https://github.com/BoschSensortec/BMI08x-Sensor-API
+		* BMI160	-  v3.7.5	- https://github.com/BoschSensortec/BMI160_driver
+		* BMP3		-  v1.1.0	- https://github.com/BoschSensortec/BMP3-Sensor-API
+        * BHY2      -   v1.0    
+	- C examples for BHy1,BMA400,BME280,BME680,BMI08x,BMI160,BMP3,BHy2
+	- COINES Code Editor v1.0
+	- USB driver for Bosch Sensortec Application Board 2.0
+
+* C examples can be compiled on Windows and Linux with GCC v4.8 or later
+* Requires Development Desktop 2.0 firmware in the Bosch Sensortec Application Board 2.0
+  (To upgrade  Application Board 2.0 firmware,use the Development Desktop 2.0 software) 
