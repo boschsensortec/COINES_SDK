@@ -1,0 +1,40 @@
+name: COINESPY deploy on PYPI
+
+on:
+  push:
+    tags:
+      - 'COINES_SDK_v*'
+
+jobs:
+  coinespy-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+        
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install twine
+          pip install -r coines-api/pc/python/requirements.txt
+
+      - name: Build and upload to TestPyPI
+        run: |
+          cd coines-api/pc/python
+          pip install --upgrade build
+          python -m build
+          twine upload --repository pypi -u __token__ -p -p ${{ secrets.BOSCHSENSORTEC }} dist/* --verbose
+
+      - name: Test installation from TestPyPI
+        run: |
+          pip install coinespy
+
+      - name: Cleanup
+        run: |
+          rm -rf dist
