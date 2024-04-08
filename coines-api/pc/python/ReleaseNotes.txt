@@ -1,0 +1,37 @@
+COINESPY v1.0.2 - (19-03-2024)
+
+Updates
+* Added APP3.1 board support
+* Added BLE interface support for Linux and MacOS
+
+_______________________________________________________________
+
+COINESPY v1.0.1 - (01-12-2023)
+
+Updates
+* Added COINES library for all platforms
+
+_______________________________________________________________
+
+COINESPY v1.0.0 - (12-07-2023)
+
+Updates
+* Added BLE interface support for Windows
+* Added error codes for Serial and BLE configuration failures
+* Exposed other streaming configuration parameters
+* Added configuration parameters for Serial and BLE communication in the coines_open_comm_intf() API
+* Added below API wrappers:
+    - scan_ble_devices(): Scans the BLE devices near the PC
+    - echo_test(): Tests communication with APP2.0 and APP3.X
+
+________________________________________________________________
+
+COINESPY v0.9.0 - (30-11-2022)
+
+Updates
+* Added below API wrappers for streaming functionalities
+    - config_streaming() - Sends the streaming settings to the board
+    - start_stop_streaming() - Starts or stops the streaming
+    - read_stream_sensor_data() - Reads the streaming sensor data
+    
+__________________________________________________________________

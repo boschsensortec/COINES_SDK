@@ -1,0 +1,5 @@
+COINES_SDK library package for APP2.0 board contains a very minimal version of Advanced Software Framework(ASF).
+It is only for supporting ATSAM4S16C microcontroller.
+
+Full package of Microchip ASF can be downloaded from the below link,
+https://www.microchip.com/mplab/avr-support/advanced-software-framework

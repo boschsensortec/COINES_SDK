@@ -1,0 +1,33 @@
+﻿================ Bosch Sensortec COINESPY =====================================
+
+`COINESPY` provides a python interface for interacting with the Bosch Sensortec's Engineering boards.
+The library offers the following range of functionalities:
+
+- Control VDD and VDDIO of sensor
+- Configure SPI and I2C bus parameters
+- Read and write into registers of sensors from Bosch Sensortec via SPI and I2C
+- Read and write digital pins of the Application Board.
+
+
+===================================================
+================ Licenses =========================
+===================================================
+
+Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+
+Subject to the compliance with these terms, the User may use COINES software development kit and any derivatives exclusively with Bosch Sensortec GmbH hardware products.
+It is the User responsibility to comply with third party license terms applicable to the use of third-party software (including open-source software) that may accompany COINES software development kit.
+
+The User of this SDK must be aware that the use of this SDK may be subject to import/export restrictions. In particular there may be approval requirements, 
+or use of this SDK and related technologies may be subject to restrictions/limitations in foreign countries. 
+
+The User of this SDK shall comply with any applicable national and international import/export control regulations, in particular Federal Republic of Germany, 
+the European Union and the United States of America. 
+
+This license agreement shall not apply if and as far as it now or in future violates mandatory law applicable for the User and/or Bosch Sensortec GmbH, in particular foreign trade/export control law, 
+e.g. the EU Directive 833/2014 (consolidated version as of October 1, 2023 available here: https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02014R0833-20231001#M25-1%20). 
+In case according to foreign trade/export control law, Bosch Sensortec GmbH is obliged to prevent that the User provides Licensed Products to specific persons or legal entities or exports Licensed Products to specific countries, 
+the User of this SDK shall comply with a respective order by Bosch Sensortec GmbH. 
+Currently, according to EU Directive 833/2014 the User of this SDK shall not export Licensed Products to Russia. 
+Furthermore, if and to the extent that rights of use are granted or transferred under this Agreement, this shall in any event not apply to any Russian and/or Belarusian intellectual property right or trade secret protected in said states.
+The	Bosch Sensortec GmbH fulfilment of these Terms & Conditions is subject to such fulfilment not being opposed by impediments due to national or international import/export regulations or by any other statutory provisions.
