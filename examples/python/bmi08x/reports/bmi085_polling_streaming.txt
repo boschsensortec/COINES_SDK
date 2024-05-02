@@ -1,0 +1,32 @@
+++++++++ I2CBus ++++++++
+BoardInfo: HW/SW ID: 0x11/0x174
+ShuttleID: 0x46
+Chip ID accel: 0x1f
+Chip ID gyro: 0xf
+Accel range: 3 Gyro range: 3
+
+ACCEL DATA 
+
+Accel[0] Acc_ms2_X : -0.287	Acc_ms2_Y : +0.690	Acc_ms2_Z : +9.802
+Accel[1] Acc_ms2_X : -0.177	Acc_ms2_Y : +0.871	Acc_ms2_Z : +9.835
+Accel[2] Acc_ms2_X : -0.254	Acc_ms2_Y : +0.670	Acc_ms2_Z : +9.816
+Accel[3] Acc_ms2_X : -0.287	Acc_ms2_Y : +0.694	Acc_ms2_Z : +9.797
+Accel[4] Acc_ms2_X : -0.287	Acc_ms2_Y : +0.666	Acc_ms2_Z : +9.725
+Accel[5] Acc_ms2_X : -0.259	Acc_ms2_Y : +0.814	Acc_ms2_Z : +9.826
+Accel[6] Acc_ms2_X : -0.177	Acc_ms2_Y : +0.704	Acc_ms2_Z : +9.893
+Accel[7] Acc_ms2_X : -0.278	Acc_ms2_Y : +0.737	Acc_ms2_Z : +9.740
+Accel[8] Acc_ms2_X : -0.163	Acc_ms2_Y : +0.680	Acc_ms2_Z : +9.816
+Accel[9] Acc_ms2_X : -0.235	Acc_ms2_Y : +0.709	Acc_ms2_Z : +9.787
+
+GYRO DATA 
+
+Gyro[0] Gyr_DPS_X : -0.10	Gyr_DPS_Y : +0.56	Gyr_DPS_Z : +1.43
+Gyro[1] Gyr_DPS_X : +0.03	Gyr_DPS_Y : +1.21	Gyr_DPS_Z : -0.31
+Gyro[2] Gyr_DPS_X : -0.51	Gyr_DPS_Y : +0.09	Gyr_DPS_Z : -0.04
+Gyro[3] Gyr_DPS_X : +0.68	Gyr_DPS_Y : -0.05	Gyr_DPS_Z : -0.22
+Gyro[4] Gyr_DPS_X : +0.11	Gyr_DPS_Y : -0.14	Gyr_DPS_Z : +0.24
+Gyro[5] Gyr_DPS_X : -0.50	Gyr_DPS_Y : -0.06	Gyr_DPS_Z : +0.62
+Gyro[6] Gyr_DPS_X : -0.05	Gyr_DPS_Y : +1.07	Gyr_DPS_Z : -0.11
+Gyro[7] Gyr_DPS_X : +0.27	Gyr_DPS_Y : +0.98	Gyr_DPS_Z : +0.56
+Gyro[8] Gyr_DPS_X : +0.37	Gyr_DPS_Y : +0.40	Gyr_DPS_Z : +0.82
+Gyro[9] Gyr_DPS_X : +0.40	Gyr_DPS_Y : -0.17	Gyr_DPS_Z : +0.21

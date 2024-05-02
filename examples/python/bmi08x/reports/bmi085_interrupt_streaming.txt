@@ -1,0 +1,38 @@
+++++++++ I2CBus ++++++++
+BoardInfo: HW/SW ID: 0x11/0x174
+ShuttleID: 0x46
+Chip ID accel: 0x1f
+Chip ID gyro: 0xf
+Accel range: 3 Gyro range: 3
+
+ACCEL DATA 
+
+Accel[1] Acc_ms2_X : -0.292	Acc_ms2_Y : +0.680	Acc_ms2_Z : +9.740	Chip_id : 31 T(us): 17609362
+Accel[3] Acc_ms2_X : -0.206	Acc_ms2_Y : +0.776	Acc_ms2_Z : +9.821	Chip_id : 31 T(us): 17610599
+Accel[10] Acc_ms2_X : -0.235	Acc_ms2_Y : +0.728	Acc_ms2_Z : +9.778	Chip_id : 31 T(us): 17614929
+Accel[12] Acc_ms2_X : -0.220	Acc_ms2_Y : +0.646	Acc_ms2_Z : +9.663	Chip_id : 31 T(us): 17616167
+Accel[19] Acc_ms2_X : -0.330	Acc_ms2_Y : +0.666	Acc_ms2_Z : +9.730	Chip_id : 31 T(us): 17620497
+Accel[24] Acc_ms2_X : -0.215	Acc_ms2_Y : +0.690	Acc_ms2_Z : +9.792	Chip_id : 31 T(us): 17623591
+Accel[26] Acc_ms2_X : -0.153	Acc_ms2_Y : +0.704	Acc_ms2_Z : +9.754	Chip_id : 31 T(us): 17624828
+Accel[31] Acc_ms2_X : -0.273	Acc_ms2_Y : +0.632	Acc_ms2_Z : +9.764	Chip_id : 31 T(us): 17627922
+Accel[33] Acc_ms2_X : -0.292	Acc_ms2_Y : +0.718	Acc_ms2_Z : +9.869	Chip_id : 31 T(us): 17629159
+Accel[40] Acc_ms2_X : -0.268	Acc_ms2_Y : +0.742	Acc_ms2_Z : +9.797	Chip_id : 31 T(us): 17633490
+
+GYRO DATA 
+
+Gyro[52] Gyr_DPS_X : -0.11	Gyr_DPS_Y : -0.75	Gyr_DPS_Z : +0.08	Chip_id : 15 T(us): 17635139
+Gyro[61] Gyr_DPS_X : -0.10	Gyr_DPS_Y : -0.02	Gyr_DPS_Z : -0.53	Chip_id : 15 T(us): 17639643
+Gyro[78] Gyr_DPS_X : -0.34	Gyr_DPS_Y : +0.02	Gyr_DPS_Z : -0.49	Chip_id : 15 T(us): 17648151
+Gyro[84] Gyr_DPS_X : +0.08	Gyr_DPS_Y : -0.40	Gyr_DPS_Z : +0.66	Chip_id : 15 T(us): 17651153
+Gyro[93] Gyr_DPS_X : -0.31	Gyr_DPS_Y : -0.47	Gyr_DPS_Z : +0.00	Chip_id : 15 T(us): 17655657
+Gyro[104] Gyr_DPS_X : +0.43	Gyr_DPS_Y : +0.32	Gyr_DPS_Z : -0.28	Chip_id : 15 T(us): 17661162
+Gyro[110] Gyr_DPS_X : +0.75	Gyr_DPS_Y : +0.11	Gyr_DPS_Z : -0.34	Chip_id : 15 T(us): 17664164
+Gyro[119] Gyr_DPS_X : +0.51	Gyr_DPS_Y : -0.29	Gyr_DPS_Z : -0.04	Chip_id : 15 T(us): 17668668
+Gyro[134] Gyr_DPS_X : +0.14	Gyr_DPS_Y : -0.42	Gyr_DPS_Z : +0.22	Chip_id : 15 T(us): 17676175
+Gyro[142] Gyr_DPS_X : +0.38	Gyr_DPS_Y : +1.30	Gyr_DPS_Z : -0.02	Chip_id : 15 T(us): 17680178
+
+<-----------------ACCEL Streaming Benchmark Result------------------>
+ACCEL data loss - 14.63415%, total packets received - 41, packets lost - 6
+
+<-----------------GYRO Streaming Benchmark Result------------------>
+GYRO data loss - 4.89510%, total packets received - 143, packets lost - 7

@@ -1,0 +1,38 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+    "twine"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "coinespy"
+version = "1.0.2"
+authors = [
+  { name="Bosch Sensortec GmbH", email="contact@bosch-sensortec.com" },
+]
+description = "Python wrapper for coinesAPI"
+readme = "Coinespy_description.md"
+requires-python = ">=2.6, <4"
+dependencies = [
+                "flake8",
+                "lizard",
+                "pytest",
+                "pytest-cov",
+                "pytest-html"
+                ]
+
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 2",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X"
+]
+
+[project.urls]
+"Homepage" = "https://www.bosch-sensortec.com/"
+"Source code" = "https://github.com/boschsensortec/COINES"

@@ -24,14 +24,14 @@ jobs:
           pip install twine
           pip install -r coines-api/pc/python/requirements.txt
 
-      - name: Build and upload to TestPyPI
+      - name: Build and upload to PyPI
         run: |
           cd coines-api/pc/python
           pip install --upgrade build
           python -m build
           twine upload --repository pypi -u __token__ -p ${{ secrets.BOSCHSENSORTEC }} dist/* --verbose
 
-      - name: Test installation from TestPyPI
+      - name: Test installation from PyPI
         run: |
           pip install coinespy
 

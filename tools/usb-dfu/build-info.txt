@@ -1,0 +1,18 @@
+dfu-util
+
+Source code URL :  https://git.code.sf.net/p/dfu-util/dfu-util
+Version         :  v0.9-44-g0c62188 (master)
+
+Toolchain   :  i686-w64-mingw32-gcc (v7.4.0)
+Environment :  MSYS2 MinGW 32-bit
+
+Symbols were removed in the executables using 'strip' tool provided in the toolchain
+
+====================================================================================
+
+libusb-1.0.dll
+
+URL  : https://github.com/libusb/libusb/releases/download/v1.0.22/libusb-1.0.22.7z
+File : MS32/dll/libusb-1.0.dll
+
+====================================================================================

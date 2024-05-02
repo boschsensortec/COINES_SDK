@@ -1,0 +1,11 @@
+--- common/services/usb/class/cdc/device/udi_cdc.h
++++ common/services/usb/class/cdc/device/udi_cdc.h
+@@ -251,7 +251,7 @@ typedef struct {
+    .iface.bNumEndpoints          = 1,\
+    .iface.bInterfaceClass        = CDC_CLASS_COMM,\
+    .iface.bInterfaceSubClass     = CDC_SUBCLASS_ACM,\
+-   .iface.bInterfaceProtocol     = CDC_PROTOCOL_V25TER,\
++   .iface.bInterfaceProtocol     = 0,\
+    .header.bFunctionLength       = sizeof(usb_cdc_hdr_desc_t),\
+    .header.bDescriptorType       = CDC_CS_INTERFACE,\
+    .header.bDescriptorSubtype    = CDC_SCS_HEADER,\

@@ -1,0 +1,22 @@
+++++++++ SPIBus ++++++++
+BoardInfo: HW/SW ID: 0x11/0x174
+ShuttleID: 0x1a1
+Chip ID accel: 0x90
+Power settings before power-up (expected: 0x00): 0x00
+ACC: Power settings after power-up (expected: 0x02): 0x02
+
+Range: 4G
+
+  ax	   ay	   az
++0.057	 -0.357	 +0.887
++0.057	 -0.357	 +0.891
++0.047	 -0.348	 +0.893
++0.049	 -0.355	 +0.869
++0.047	 -0.355	 +0.889
++0.051	 -0.357	 +0.889
++0.051	 -0.361	 +0.879
++0.053	 -0.355	 +0.879
++0.053	 -0.354	 +0.887
++0.057	 -0.354	 +0.881
+
+Temperature: 35.00
