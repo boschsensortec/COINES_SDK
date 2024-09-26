@@ -33,7 +33,7 @@ jobs:
 
       - name: Test installation from PyPI
         run: |
-          pip install coinespy
+          pip install --upgrade coinespy
 
       - name: Cleanup
         run: |
