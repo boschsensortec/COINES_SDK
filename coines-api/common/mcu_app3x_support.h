@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -68,20 +68,23 @@
 #include "app30_eeprom.h"
 #include "flogfs.h"
 #include "w25_common.h"
+#if defined(MCU_APP30) || defined(MCU_HEAR3X)
 #include "w25m02gw.h"
 #include "w25n02jw.h"
+#else
+#include "w25n02kw.h"
+#endif
 #include "ble_service.h"
 
 #include "uart_common.h"
 
-#if defined(MCU_APP31)
-
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
 /* I2C common */
 #include "i2c_common.h"
 
 /* PMIC driver */
 #include "bq25120.h"
-
+#if defined(MCU_APP31)
 #define RESET_INT                NRF_GPIO_PIN_MAP(0, 27) /*RESET line from PMIC */
 #define CHRG_LSCTRL              NRF_GPIO_PIN_MAP(0, 03) /*LoadSwitch/LDO control pin */
 #define CHRG_CD                  NRF_GPIO_PIN_MAP(0, 28) /*PMIC Chip disable pin */
@@ -91,10 +94,57 @@
 #define POWER_INT                NRF_GPIO_PIN_MAP(1, 15) /*Interrupt line form PMIC */
 #define VIN_DEC                  NRF_GPIO_PIN_MAP(1, 13) /*VIN detection pin */
 #endif
+#endif
 
 /**********************************************************************************/
 /* macro definitions */
 /**********************************************************************************/
+#if defined(MCU_HEAR3X)
+
+#define  GPIO_1                  NRF_GPIO_PIN_MAP(0, 30)      /* GPIO 1 */
+#define  GPIO_2                  NRF_GPIO_PIN_MAP(0, 4)       /* GPIO 2 */
+#define  GPIO_3                  NRF_GPIO_PIN_MAP(0, 5)       /* GPIO 3 */
+#define  GPIO_4                  NRF_GPIO_PIN_MAP(1, 10)      /* GPIO 4 */
+#define  I2C_SDA                 NRF_GPIO_PIN_MAP(0, 13)
+#define  I2C_SCL                 NRF_GPIO_PIN_MAP(0, 14)
+#define  INT0                    NRF_GPIO_PIN_MAP(1, 8)
+#define  INT1                    NRF_GPIO_PIN_MAP(1, 1)
+#define  INT2                    NRF_GPIO_PIN_MAP(1, 11)
+#define  INT3                    NRF_GPIO_PIN_MAP(1, 15)
+
+#define  GPIO_CS0                NRF_GPIO_PIN_MAP(0, 25)      /*  */
+#define  GPIO_CS1                NRF_GPIO_PIN_MAP(0, 28)      /*  */
+#define  GPIO_CS2                NRF_GPIO_PIN_MAP(0, 3)       /*  */
+#define  GPIO_SDO                NRF_GPIO_PIN_MAP(0, 16)      /*  */
+#define  GPIO_SDI                NRF_GPIO_PIN_MAP(0, 15)      /*  */
+#define  GPIO_SCK                NRF_GPIO_PIN_MAP(0, 24)      /*  */
+
+#define UART_RX                  NRF_GPIO_PIN_MAP(1, 3)
+#define UART_TX                  NRF_GPIO_PIN_MAP(1, 2)
+
+#define MCU_LED_R                NRF_GPIO_PIN_MAP(0,27)//(0, 27)
+
+#define RESET_PIN                NRF_GPIO_PIN_MAP(0, 18)
+
+#define GPIO_I2S_SDOUT           NRF_GPIO_PIN_MAP(0, 2)
+#define GPIO_I2S_SDIN            NRF_GPIO_PIN_MAP(0, 31)
+#define GPIO_I2S_SCK             NRF_GPIO_PIN_MAP(1, 12)
+#define GPIO_I2S_LRCK            NRF_GPIO_PIN_MAP(1, 13)
+#define GPIO_I2S_MCK             NRF_GPIO_PIN_MAP(0, 29)
+#define GPIO_CHRG_LSCTRL         NRF_GPIO_PIN_MAP(0, 26)
+#define GPIO_CHRG_CD             NRF_GPIO_PIN_MAP(0, 06)
+
+#define QSPI_D3_HOLD             NRF_GPIO_PIN_MAP(0, 23)
+#define QSPI_D1_DO               NRF_GPIO_PIN_MAP(0, 21)
+#define QSPI_D2_WP               NRF_GPIO_PIN_MAP(0, 22)
+#define QSPI_D0_DI               NRF_GPIO_PIN_MAP(0, 20)
+#define QSPI_CS                  NRF_GPIO_PIN_MAP(0, 17)
+#define QSPI_CLK                 NRF_GPIO_PIN_MAP(0, 19)
+
+
+
+
+#else
 #define  GPIO_0                  NRF_GPIO_PIN_MAP(0, 14)      /* SB1_4 - P0.14 (I2C1_SCL) */
 #define  GPIO_1                  NRF_GPIO_PIN_MAP(0, 13)      /* SB1_5 - P0.13 (I2C1_SDA) */
 #define  GPIO_2                  NRF_GPIO_PIN_MAP(1, 1)      /* INT1 - SB1_6 - P1.01 */
@@ -121,6 +171,9 @@
 #define VDD_SEL                  NRF_GPIO_PIN_MAP(0, 27)
 #define VDD_PS_EN                NRF_GPIO_PIN_MAP(0, 3)
 #define VDDIO_PS_EN              NRF_GPIO_PIN_MAP(0, 28)
+#endif
+
+
 
 /**********************************************************************************/
 /* functions */

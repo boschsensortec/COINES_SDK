@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -696,7 +696,7 @@ void coines_write_intf(enum coines_comm_intf intf, void *buffer, uint16_t len)
     {
         uint8_t * tx_data = (uint8_t *)buffer;
 
-        uart_write(tx_data, len);
+        (void)uart_write(tx_data, len);
 
     }
     else if (intf == COINES_COMM_INTF_BLE)
@@ -741,7 +741,9 @@ int _write(int fd, const char * p_char, int len)
     {
         for (i = 0; i < len; i++)
         {
+            /*lint -e1773*/
             UNUSED_VARIABLE(uart_write((uint8_t *)p_char++, 1));
+            /*lint +e1773*/
         }
 
         return len;

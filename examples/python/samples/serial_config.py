@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
-
+Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
 BSD-3-Clause
 
 Redistribution and use in source and binary forms, with or without
@@ -43,7 +42,6 @@ ROBERT_BOSCH_USB_VID = 0x108C
 ARDUINO_USB_VID = 0x2341
 BST_APP31_CDC_USB_PID = 0xAB38
 BST_APP30_CDC_USB_PID = 0xAB3C
-BST_APP20_CDC_USB_PID = 0xAB2C
 ARDUINO_NICLA_USB_PID = 0x0060
 
 # Please change the COM port name based on your device connection.

@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -42,9 +42,15 @@
 /**********************************************************************************/
 /* macro definitions */
 /**********************************************************************************/
+/*! Interface instances*/
+#define SPIM_TWIM_INSTANCE_0 0
+#define SPIM_TWIM_INSTANCE_1 1
+#define SPIM_TWIM_INSTANCE_2 2
+#define SPIM_TWIM_INSTANCE_3 3
+
 /*! I2C timeout in milliseconds */
 #define I2C_TIMEOUT_MS               (1000)
-
+#if defined(MCU_APP30) || defined(MCU_APP31)
 /*! I2C pins for primary (Sensor) interface */
 #define TWIM0_INSTANCE               0
 #define I2C0_SEN_SDA_PIN             NRF_GPIO_PIN_MAP(0, 6)
@@ -54,6 +60,17 @@
 #define TWIM1_INSTANCE               1
 #define I2C1_INTERNAL_TEMP_SDA_PIN   NRF_GPIO_PIN_MAP(0, 29)
 #define I2C1_INTERNAL_TEMP_SCL_PIN   NRF_GPIO_PIN_MAP(0, 26)
+#elif defined(MCU_HEAR3X)
+/*! I2C pins for primary (Sensor) interface */
+#define TWIM0_INSTANCE               0
+#define I2C0_SEN_SDA_PIN             NRF_GPIO_PIN_MAP(0, 15)
+#define I2C0_SEN_SCL_PIN             NRF_GPIO_PIN_MAP(0, 24)
+
+/*! I2C pins for temperature sensor (On-board) interface */
+#define TWIM1_INSTANCE               1
+#define I2C1_INTERNAL_TEMP_SDA_PIN   NRF_GPIO_PIN_MAP(0, 13)
+#define I2C1_INTERNAL_TEMP_SCL_PIN   NRF_GPIO_PIN_MAP(0, 14)
+#endif
 
 /*! I2C pins for external temperature sensor (Adapter board) interface */
 #define I2C1_EXTERNAL_TEMP_SDA_PIN   NRF_GPIO_PIN_MAP(0, 13)    /* GPIO PIN - 1 */
@@ -71,13 +88,23 @@
 /*! SPI pins for primary (Sensor) interface */
 #if defined(MCU_APP30)
 #define SPIM0_INSTANCE               3
-#else /*MCU_APP31*/
+#elif defined(MCU_APP31)/*MCU_APP31*/
 #define SPIM0_INSTANCE               0
 #endif
+#if defined(MCU_APP30) || defined(MCU_APP31)
 #define SPI0_SEN_MOSI_PIN            NRF_GPIO_PIN_MAP(0, 6) /* GPIO PIN - 43 */
 #define SPI0_SEN_MISO_PIN            NRF_GPIO_PIN_MAP(0, 15) /* GPIO PIN - 3 */
 #define SPI0_SEN_SCK_PIN             NRF_GPIO_PIN_MAP(0, 16) /* GPIO PIN - 4 */
 #define SPI0_SEN_CS_PIN              NRF_GPIO_PIN_MAP(0, 24) /* GPIO PIN - 5 */
+
+#elif defined(MCU_HEAR3X)
+#define SPIM0_INSTANCE               3
+
+#define SPI0_SEN_MOSI_PIN            NRF_GPIO_PIN_MAP(0, 15) /* GPIO PIN - 43 */
+#define SPI0_SEN_MISO_PIN            NRF_GPIO_PIN_MAP(0, 16) /* GPIO PIN - 3 */
+#define SPI0_SEN_SCK_PIN             NRF_GPIO_PIN_MAP(0, 24) /* GPIO PIN - 4 */
+#define SPI0_SEN_CS_PIN              NRF_GPIO_PIN_MAP(0, 25) /* GPIO PIN - 5 */
+#endif
 
 /*! SPI pins for secondary (OIS) interface */
 #define SPIM1_INSTANCE               3
@@ -92,6 +119,7 @@
 #define SPI3_QSPI_MISO_PIN           NRF_GPIO_PIN_MAP(0, 21) /* GPIO PIN - 48 MIS0 */
 #define SPI3_QSPI_SCK_PIN            NRF_GPIO_PIN_MAP(0, 19) /* GPIO PIN - 52 SCLK */
 #define SPI3_QSPI_CS_PIN             NRF_GPIO_PIN_MAP(0, 17) /* GPIO PIN - 51 CS */
+
 
 /**********************************************************************************/
 /* data structure declarations  */

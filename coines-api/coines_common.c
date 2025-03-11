@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -41,6 +41,11 @@
 /**********************************************************************/
 #include "coines_common.h"
 
+/**********************************************************************************/
+/* local macro definitions */
+/**********************************************************************************/
+#define SWAP_BYTES(x) ((((x) >> 8) | ((x) << 8)) & 0xffff)
+
 /*********************************************************************/
 /* Function definitions */
 /**********************************************************************/
@@ -50,7 +55,7 @@
  */
 const char *get_coines_error_str(int16_t error_code)
 {
-    static const error_code_mapping errorMappings[NUM_ERROR_CODES] = {
+    static const error_code_mapping error_mappings[] = {
         { COINES_SUCCESS, "Success" }, { COINES_E_FAILURE, "[COINES Error] Generic failure" },
         { COINES_E_COMM_IO_ERROR, "[COINES Error] Communication IO failed. Check connections with the sensor" },
         { COINES_E_UNABLE_CLAIM_INTF, "[COINES Error] Unable to claim interface. Check if the board is in use" },
@@ -90,28 +95,61 @@ const char *get_coines_error_str(int16_t error_code)
         { COINES_E_MAX_SENSOR_COUNT_REACHED, "[COINES Error] Maximum sensor count reached" },
         { COINES_E_EEPROM_WRITE_FAILED, "[COINES Error] EEPROM write failed" },
         { COINES_E_INVALID_EEPROM_RW_LENGTH, "[COINES Error] Invalid EEPROM write length" },
-        { COINES_E_INVALID_SCOM_CONFIG, "[COINES Error] Invalid serial com config" },
-        { COINES_E_INVALID_BLE_CONFIG, "[COINES Error] Invalid BLE config" },
+        { COINES_E_SCOM_INVALID_CONFIG, "[COINES Error] Invalid serial com config" },
+        { COINES_E_BLE_INVALID_CONFIG, "[COINES Error] Invalid BLE config" },
         { COINES_E_SCOM_PORT_IN_USE, "[COINES Error] Serial com port in use" },
         { COINES_E_INCOMPATIBLE_FIRMWARE, "[COINES Error] Incompatible firmware for the selected comm type" },
         { COINES_E_UART_INIT_FAILED, "[COINES Error] UART initialization failed" },
         { COINES_E_UART_WRITE_FAILED, "[COINES Error] UART write failed" },
         { COINES_E_UART_INSTANCE_NOT_SUPPORT, "[COINES Error] UART instance not supported"},
         { COINES_E_BLE_ADAPTOR_NOT_FOUND, "[COINES Error] BLE Adaptor not found" },
-        { COINES_E_ADAPTER_BLUETOOTH_NOT_ENABLED, "[COINES Error] Adaptor Bluetooth not enabled" },
+        { COINES_E_BLE_ADAPTER_BLUETOOTH_NOT_ENABLED, "[COINES Error] Adaptor Bluetooth not enabled" },
         { COINES_E_BLE_PERIPHERAL_NOT_FOUND, "[COINES Error] BLE peripheral not found" },
         { COINES_E_BLE_LIBRARY_NOT_LOADED, "[COINES Error] BLE library not loaded" },
-        { COINES_E_APP_BOARD_BLE_NOT_FOUND, "[COINES Error] APP board BLE not found" },
-        { COINES_E_BLE_COMM_FAILED, "[COINES Error] BLE Communication failed" }
+        { COINES_E_BLE_APP_BOARD_NOT_FOUND, "[COINES Error] APP board BLE not found" },
+        { COINES_E_BLE_COMM_FAILED, "[COINES Error] BLE communication failed" },
+		{ COINES_E_DECODER_FAILED, "[COINES Error] Decoder failed" },
+        { COINES_E_ENCODER_FAILED, "[COINES Error] Encoder failed" },
+        { COINES_E_SERIAL_COMM_FAILED, "[COINES Error] Serial communication failed" },
+        { COINES_E_INTERFACE_FAILED, "[COINES Error] Interface failed" },
+        { COINES_E_VDD_CONFIG_FAILED, "[COINES Error] VDD configuration is not set min" },
+        { COINES_E_VDDIO_CONFIG_FAILED, "[COINES Error] VDDIO configuration is not set min" },
+		{ COINES_E_PTHREAD_FAILED, "[COINES Error] Comm Pthread failed" },
+        { COINES_E_READ_TIMEOUT, "[COINES Error] Read timeout" },
+        { COINES_E_STREAMING_INIT_FAILURE, "[COINES Error] Streaming not initialized" },
+        { COINES_E_INVALID_PARAM, "[COINES Error] Invalid parameter" }
     };
 
-    for (int i = 0; i < NUM_ERROR_CODES; i++)
+    for (uint16_t i = 0; i < sizeof(error_mappings)/sizeof(error_mappings[0]); i++)
     {
-        if (error_code == errorMappings[i].code)
+        if (error_code == error_mappings[i].code)
         {
-            return errorMappings[i].message;
+            return error_mappings[i].message;
         }
     }
 
     return "[COINES error] Unknown error code";
+}
+
+/*!
+ * @brief This API is used to swap the endianness of the 16-bit data
+ */
+void swap_endianness(uint16_t* dest_arr, uint16_t* src_arr, uint16_t count)
+{
+    for (uint16_t i = 0; i < count; i++) {
+        dest_arr[i] = SWAP_BYTES(src_arr[i]);
+    }
+}
+
+/*!
+ *  @brief This API is used to check if the system is little-endian or big-endian
+ *
+ */
+bool is_system_little_endian() {
+    uint16_t value = 0x1;  
+    // 2-byte integer with the least significant byte set to 1
+    // Pointer to the first byte of 'value'
+    uint8_t *byte_ptr = (uint8_t*)&value;  
+    // If the least significant byte is 1, the system is little-endian
+    return byte_ptr[0] == 1;
 }

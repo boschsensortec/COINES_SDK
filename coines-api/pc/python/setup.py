@@ -49,12 +49,10 @@ def copy_dependencies():
     """
     Copy supporting folders for python package
     """
-    copy_folder("../../../firmware/app2.0/coines_bridge", "coinespy/firmware/app2.0/coines_bridge")
     copy_folder("../../../firmware/app3.0/coines_bridge", "coinespy/firmware/app3.0/coines_bridge")
     copy_folder("../../../firmware/app3.1/coines_bridge", "coinespy/firmware/app3.1/coines_bridge")
     copy_folder("../../../firmware/nicla/coines_bridge", "coinespy/firmware/nicla/coines_bridge")
     copy_folder("../../../tools/usb-dfu", "coinespy/tools/usb-dfu")
-    copy_file("../../../tools/app20-flash/app20-flash.exe", "coinespy/tools/app20-flash")
     copy_file("../../../tools/app_switch/app_switch.exe", "coinespy/tools/app_switch")
     copy_file("../../../tools/app_switch/README.md", "coinespy/tools/app_switch")
     copy_folder("../../../tools/openocd", "coinespy/tools/openocd")
@@ -71,7 +69,7 @@ DOCLINES = (__doc__ or "").split("\n")
 copy_dependencies()
 setuptools.setup(
     name="coinespy",
-    version="1.0.2",
+    version="1.0.4",
     author="Bosch Sensortec GmbH",
     author_email="contact@bosch-sensortec.com",
     url="https://www.bosch-sensortec.com/",

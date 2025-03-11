@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -50,7 +50,11 @@ extern "C" {
 #endif
 
 #define MBUF_DEPTH            2
+#if defined(MCU_APP31)
+#define MBUF_DATA_SIZE        4096
+#else
 #define MBUF_DATA_SIZE        1024
+#endif
 
 #define MBUF_SUCCESS          0
 #define MBUF_E_INIT_FAIL      -1
@@ -139,6 +143,12 @@ uint16_t mbuf_get_buffer_length();
  *
  */
 void mbuf_deinit(void);
+
+/*!
+ * @brief This API is used to switch to next buf.
+ *
+ */
+void switch_buffer(void);
 
 /* End of CPP guard */
 #ifdef __cplusplus

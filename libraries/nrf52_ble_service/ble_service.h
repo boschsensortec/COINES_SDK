@@ -1,6 +1,6 @@
 /**
  * Copyright (c) 2016 - 2018, Nordic Semiconductor ASA
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * All rights reserved.
  *
@@ -73,6 +73,10 @@
 #define BLE_DEVICE_NAME                 "APP Board 3.1 "
 #endif
 
+#ifdef MCU_HEAR3X
+#define BLE_DEVICE_NAME                 "Hearable board"
+#endif
+
 #define APP_BLE_CONN_CFG_TAG            1                                           /**< A tag identifying the
                                                                                      * SoftDevice BLE configuration. */
 
@@ -130,11 +134,13 @@ NRF_RINGBUF_DEF(m_ringbuf, RECEIVE_BUFF_LEN);
 
 typedef void (*temp_read_callback)(void * data, uint8_t* data_len);
 typedef void (*bat_read_callback)(void);
+typedef void (*data_receive_callback)(void);
 
 typedef struct ble_service_init_s
 {
     temp_read_callback temp_read_callback;
     bat_read_callback batt_status_read_callback;
+    data_receive_callback data_rx_callback;
     char * adv_name;
     int8_t tx_power;
 }ble_service_init_t;

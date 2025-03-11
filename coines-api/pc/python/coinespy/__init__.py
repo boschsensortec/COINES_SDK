@@ -9,6 +9,6 @@ from coinespy.coines import *
 
 MAJOR_VERSION = 1
 MINOR_VERSION = 0
-MICRO_VERSION = 2
+MICRO_VERSION = 4
 
 __version__ = f'{MAJOR_VERSION}.{MINOR_VERSION}.{MICRO_VERSION}'

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -46,7 +46,6 @@ static volatile uint8_t transmit_buffer_idx = 0;
 static volatile uint8_t buffer_is_empty[MBUF_DEPTH];
 
 /* Static function declaration */
-static void switch_buffer(void);
 static void clear_buffer(void);
 static void update_transmit_buffer_idx(void);
 
@@ -54,7 +53,7 @@ static void update_transmit_buffer_idx(void);
  * @brief This API is used to switch to next buffer.
  *
  */
-static void switch_buffer(void)
+void switch_buffer(void)
 {
     uint8_t buffer_idx = (active_buffer_idx + 1) % MBUF_DEPTH; 
     if (buffer_is_empty[buffer_idx])
@@ -188,7 +187,12 @@ int8_t mbuf_get_from_buffer(uint8_t **p_address, uint16_t *p_length)
  */
 uint16_t mbuf_get_buffer_length()
 {
-    return mbuf.idx[active_buffer_idx];
+    if (mbuf.state != MBUF_STATE_UNINITIALIZED)
+    {
+        return mbuf.idx[active_buffer_idx];
+    }
+
+    return 0; 
 }
 
 /*!
@@ -205,6 +209,7 @@ void mbuf_deinit(void)
         {
             buffer_is_empty[i] = true; 
         }
+        memset(&mbuf, 0, sizeof(mbuf_t));
         mbuf.handler = NULL;
         mbuf.state = MBUF_STATE_UNINITIALIZED;
     }   

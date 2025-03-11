@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
-
+Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
 BSD-3-Clause
 
 Redistribution and use in source and binary forms, with or without
@@ -49,6 +48,10 @@ class BMI085(BMI08X_CLS):
 
     def __init__(self, **kwargs):
         BMI08X_CLS.__init__(self, kwargs["bus"], kwargs["interface"])
+        # Response packet info and timestamp bytes count
+        self.rsp_packet_info_bytes_count = 4
+        self.rsp_timestamp_bytes_count = 6
+
         self.accel_stream_settings = dict(
             I2C_ADDR_PRIMARY=0x18,
             NO_OF_BLOCKS=2,
@@ -85,11 +88,11 @@ class BMI085(BMI08X_CLS):
             self.accel_stream_settings, bmi08x.SensorType.ACCEL)
         self.gyro_stream_config, self.gyro_data_blocks = self.set_stream_settings(
             self.gyro_stream_settings, bmi08x.SensorType.GYRO)
-        self.number_of_samples = 10
+        self.number_of_samples = 1000
         self.accel_int_config = self.set_accel_interrupt_cfg()
         self.gyro_int_config = self.set_gyro_interrupt_cfg()
 
-        self.packet_counter = {"ACCEL": 1, "GYRO": 1}
+        self.packet_counter = {"ACCEL": 0, "GYRO": 0}
         self.lost_packets = []
         self.lost_packet_count = 0
         self.accel_stream_data_packets = []
@@ -150,6 +153,7 @@ class BMI085(BMI08X_CLS):
 
     def print_accel_gyro_data(self, sensor: dict, sensor_type, sensor_data):
         chip_id = 0
+        time_stamp = 0
         """ To Display Accel and Gyro data after unit conversion"""
         if sensor_data:
             stream_buffer, valid_sample_count = sensor_data
@@ -159,17 +163,11 @@ class BMI085(BMI08X_CLS):
                     f'\n{"ACCEL" if sensor_type == bmi08x.SensorType.ACCEL else "GYRO"} DATA \n')
                 buffer_index = 0
                 for idx in range(0, valid_sample_count):
-                    if (idx + 5) < len(data):
                         # First 4 bytes contain packet count info
-                        packet_count = 0
-                        shift_value = 24
-                        for j in range(4):
-                            packet_count |= data[buffer_index] << shift_value
-                            buffer_index += 1
-                            shift_value -= 8
+                        packet_count, buffer_index = hfunc.combine_bytes_to_value(data, buffer_index, self.rsp_packet_info_bytes_count)
 
+                        # dummy byte for sensor data read
                         if self.interface == cpy.SensorInterface.SPI and sensor_type == bmi08x.SensorType.ACCEL:
-                            # dummy byte
                             buffer_index += 1
 
                         # Next 6 bytes contain sensor info
@@ -181,6 +179,7 @@ class BMI085(BMI08X_CLS):
                             (data[5 + buffer_index] << 8) | data[4 + buffer_index], 16)
                         buffer_index += 6
 
+                        # Convert raw data to m/s^2 for accel and dps for gyro
                         if sensor_type == bmi08x.SensorType.ACCEL:
                             unit_converted_x_data = bmi08x.lsb_to_mps2(
                                 x_data, self.accel_full_range, 16)
@@ -188,7 +187,6 @@ class BMI085(BMI08X_CLS):
                                 y_data, self.accel_full_range, 16)
                             unit_converted_z_data = bmi08x.lsb_to_mps2(
                                 z_data, self.accel_full_range, 16)
-
                         elif sensor_type == bmi08x.SensorType.GYRO:
                             unit_converted_x_data = bmi08x.lsb_to_dps(
                                 x_data, self.gyro_full_range, 16)
@@ -197,29 +195,31 @@ class BMI085(BMI08X_CLS):
                             unit_converted_z_data = bmi08x.lsb_to_dps(
                                 z_data, self.gyro_full_range, 16)
 
+                        # dummy byte for chip id read
+                        if self.interface == cpy.SensorInterface.SPI and sensor_type == bmi08x.SensorType.ACCEL:
+                            buffer_index += 1
+
                         # Next 1 byte chip_id
                         chip_id = data[buffer_index]
                         buffer_index += 1
 
                         # Next 6 bytes contain Time stamp
                         if sensor["INT_TIME_STAMP"] == 1:
-                            time_stamp = 0
-                            shift_value = 40
-                            for j in range(6):
-                                time_stamp |= data[buffer_index] << shift_value
-                                buffer_index += 1
-                                shift_value -= 8
+                            time_stamp, buffer_index = hfunc.combine_bytes_to_value(data, buffer_index, self.rsp_timestamp_bytes_count)
+                            # Timestamp in microseconds can be obtained by following formula
+                            # Timestamp(us) = (48bit_timestamp / 30)
+                            time_stamp //= 30
 
                         if sensor_type == bmi08x.SensorType.ACCEL:
                             print(f"Accel[{packet_count}] Acc_ms2_X : {unit_converted_x_data:+.3f}"
                                   f"\tAcc_ms2_Y : {unit_converted_y_data:+.3f}"
                                   f"\tAcc_ms2_Z : {unit_converted_z_data:+.3f}"
-                                  f"\tChip_id : {chip_id} T(us): {time_stamp}")
+                                  f"\tChip_id : {chip_id}\tT(us): {time_stamp}")
                         elif sensor_type == bmi08x.SensorType.GYRO:
                             print(f"Gyro[{packet_count}] Gyr_DPS_X : {unit_converted_x_data:+3.2f}"
                                   f"\tGyr_DPS_Y : {unit_converted_y_data:+3.2f}"
                                   f"\tGyr_DPS_Z : {unit_converted_z_data:+3.2f}"
-                                  f"\tChip_id : {chip_id} T(us): {time_stamp}")
+                                  f"\tChip_id : {chip_id}\tT(us): {time_stamp}")
 
     def set_accel_interrupt_cfg(self):
         """ Set accel interrupt configurations """
@@ -361,10 +361,14 @@ class BMI085(BMI08X_CLS):
         index = 0
         streamed_data = []
 
+        stream_settings = self.accel_stream_settings if sensor_type == bmi08x.SensorType.ACCEL else self.gyro_stream_settings
+
+        # 4 bytes packet len + 6 bytes sensor data + 1 byte chip id + 6 bytes timestamp
+        packet_len = self.rsp_packet_info_bytes_count + sum(stream_settings['NO_OF_DATA_BYTES'])
+        if stream_settings["INT_TIME_STAMP"] == 1:
+            packet_len += self.rsp_timestamp_bytes_count
         if self.interface == cpy.SensorInterface.SPI and sensor_type == bmi08x.SensorType.ACCEL:
-            packet_len = 19
-        else:
-            packet_len = 17
+            packet_len += stream_settings['NO_OF_BLOCKS'] # 1 dummy byte for each block
 
         for sample in range(samples_count):
             # packet_len computation
@@ -377,9 +381,7 @@ class BMI085(BMI08X_CLS):
         """
         This function is to count and track lost packets
         """
-        if packet_cnt == self.packet_counter[sensor_name]:
-            self.packet_counter[sensor_name] += 1
-        else:
+        if packet_cnt != self.packet_counter[sensor_name]:
             self.lost_packet_count = packet_cnt - \
                 self.packet_counter[sensor_name]
             for i in range(self.lost_packet_count):
@@ -410,17 +412,18 @@ class BMI085(BMI08X_CLS):
         """
         self.lost_packets = []
         self.lost_packet_count = 0
-        for data in streamed_data:
+        for index, data in enumerate(streamed_data):
             packet_cnt = int.from_bytes(bytes(data[0:4]), "big", signed=False)
+            self.packet_counter[sensor_type.name] = index + 1
             self.check_for_packet_loss(sensor_type.name, packet_cnt)
 
         self.print_data_loss(sensor_type)
 
 
 if __name__ == "__main__":
-    bmi085 = BMI085(bus=cpy.I2CBus.BUS_I2C_0,
-                    interface=cpy.SensorInterface.I2C)
-    # bmi085 = BMI085(bus=cpy.SPIBus.BUS_SPI_0,interface=cpy.SensorInterface.SPI)
+    # bmi085 = BMI085(bus=cpy.I2CBus.BUS_I2C_0,
+    #                 interface=cpy.SensorInterface.I2C)
+    bmi085 = BMI085(bus=cpy.SPIBus.BUS_SPI_0,interface=cpy.SensorInterface.SPI)
     bmi085.init_board()
 
     # Change sensor config settings as shown below

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -189,13 +189,15 @@ int8_t job_queue_execute_jobs(void)
         else{
             is_executing_job = true;
             coines_execute_critical_region(update_curr_queue_count);
-            for (idx = exec_callback_idx; idx != curr_job_queue_idx; idx = (idx + 1) % JOB_QUEUE_DEPTH)
-            {
-                /* Loop runs till N-1(queue_count) */
+                for (idx = exec_callback_idx; idx != curr_job_queue_idx; idx = (idx + 1) % JOB_QUEUE_DEPTH)
+                {
+                    /* Loop runs till N-1(queue_count) */
+                    execute_job(&job_queue[idx]);
+                }
+
+                /* Execute Nth job in job_queue */
                 execute_job(&job_queue[idx]);
-            }
-            /* Execute Nth job in job_queue */
-            execute_job(&job_queue[idx]);
+                
             is_executing_job = false;
 
             return JOB_QUEUE_SUCCESS;
@@ -232,6 +234,7 @@ void job_queue_deinit(void)
     if(job_queue_state != JOB_QUEUE_STATE_UNINITIALIZED)
     {
         coines_execute_critical_region(reset_job_queue);
+        memset(&job_queue, 0, sizeof(job_queue));
         job_queue_state = JOB_QUEUE_STATE_UNINITIALIZED;
     }
 }

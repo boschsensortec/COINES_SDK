@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -39,7 +39,7 @@
 #define COINES_H_
 
 #if !defined(COINES_VERSION)
-#define COINES_VERSION  "v2.9.1"
+#define COINES_VERSION  "v2.10.4"
 #endif
 
 /* C++ Guard macro - To prevent name mangling by C++ compiler */
@@ -63,7 +63,9 @@ extern "C" {
 /* macro definitions */
 /**********************************************************************************/
 /*! Streaming states */
-#define COINES_STREAMING_START                     1
+#define COINES_USB_STREAMING_START                 1
+#define COINES_EXT_FLASH_STREAMING_START           2
+#define COINES_STREAMING_START                     COINES_USB_STREAMING_START
 #define COINES_STREAMING_STOP                      0
 
 /*! COINES_SDK USB buffer max size */
@@ -198,10 +200,10 @@ extern "C" {
 #define COINES_E_INVALID_EEPROM_RW_LENGTH          -39
 
 /*! COINES_SDK error code - Invalid serial com config */
-#define COINES_E_INVALID_SCOM_CONFIG               -40
+#define COINES_E_SCOM_INVALID_CONFIG               -40
 
 /*! COINES_SDK error code - Invalid BLE config */
-#define COINES_E_INVALID_BLE_CONFIG                -41
+#define COINES_E_BLE_INVALID_CONFIG                -41
 
 /*! COINES_SDK error code - Serial com port in use */
 #define COINES_E_SCOM_PORT_IN_USE                  -42
@@ -219,7 +221,7 @@ extern "C" {
 #define COINES_E_BLE_ADAPTOR_NOT_FOUND             -46
 
 /*! coines error code - BLE not enabled  */
-#define COINES_E_ADAPTER_BLUETOOTH_NOT_ENABLED     -47
+#define COINES_E_BLE_ADAPTER_BLUETOOTH_NOT_ENABLED     -47
 
 /*! coines error code - BLE peripheral not found  */
 #define COINES_E_BLE_PERIPHERAL_NOT_FOUND          -48
@@ -228,7 +230,7 @@ extern "C" {
 #define COINES_E_BLE_LIBRARY_NOT_LOADED            -49
 
 /*! coines error code - APP board BLE not found  */
-#define COINES_E_APP_BOARD_BLE_NOT_FOUND           -50
+#define COINES_E_BLE_APP_BOARD_NOT_FOUND           -50
 
 /*! coines error code - BLE COMM failure  */
 #define COINES_E_BLE_COMM_FAILED                   -51
@@ -236,8 +238,41 @@ extern "C" {
 /*! coines error code - incompatible firmware for the selected comm type */
 #define COINES_E_INCOMPATIBLE_FIRMWARE             -52
 
+/*! coines error code - read timeout */
+#define COINES_E_READ_TIMEOUT                      -53
+
+/*! COINES_SDK error code - VDD configuration failed */
+#define COINES_E_VDD_CONFIG_FAILED                 -54
+
+/*! COINES_SDK error code - VDDIO configuration failed */
+#define COINES_E_VDDIO_CONFIG_FAILED               -55
+
+/*! coines error code - Serial COMM failure  */
+#define COINES_E_SERIAL_COMM_FAILED				   -56
+
+/*! coines error code - Serial COMM failure  */
+#define COINES_E_INTERFACE_FAILED				   -57
+
+/*! coines error code - decoder failed  */
+#define COINES_E_DECODER_FAILED                	   -58
+
+/*! coines error code - encoder failed  */
+#define COINES_E_ENCODER_FAILED					   -59
+
+/*! coines error code - pthread failed  */
+#define COINES_E_PTHREAD_FAILED					   -60
+
+/*! COINES_SDK error code - Initialization failed */
+#define COINES_E_DEINIT_FAILED                     -61
+
+/*! COINES_SDK error code - Streaming not started */
+#define COINES_E_STREAMING_INIT_FAILURE            -62
+
+/*! COINES_SDK error code - Invalid param */
+#define COINES_E_INVALID_PARAM                     -63
+
 /*! Variable to hold the number of error codes */
-#define NUM_ERROR_CODES                             53
+#define NUM_ERROR_CODES                             64
 
 /**
  * EEPROM ID size in bytes
@@ -311,7 +346,12 @@ extern "C" {
 /*! COINES_SDK BLE char max len */
 #define COINES_CHAR_MAX_LEN                        250
 
-#if (defined(MCU_APP30) || defined(MCU_APP31))
+/*! COINES_SDK timeouts */
+#define READ_TIMEOUT_MS                             5000
+#define STREAM_RSP_TIMEOUT_MS                       1500
+#define FIFO_STREAM_RSP_TIMEOUT_MS                  10000
+
+#if (defined(MCU_APP30) || defined(MCU_APP31) || defined(MCU_HEAR3X))
 #include <stdio.h>
 extern FILE *bt_w, *bt_r;
 
@@ -341,6 +381,8 @@ int closedir(DIR *dirp);
 
 typedef void (*coines_tdm_callback)(uint32_t const *data);
 
+typedef void (*coines_intf_tx_callback)(void);
+typedef void (*coines_intf_rx_callback)(void);
 typedef void (*coines_critical_callback)(void);
 
 /**********************************************************************************/
@@ -351,20 +393,16 @@ typedef void (*coines_critical_callback)(void);
  * @brief communication interface type
  */
 enum coines_comm_intf {
-    COINES_COMM_INTF_USB,
-    /*< communication interface USB */
-    COINES_COMM_INTF_VCOM,
-    /*< communication interface VCOM */
-    COINES_COMM_INTF_BLE
-    /*< communication interface BLE */
+    COINES_COMM_INTF_USB, /*< communication interface USB */
+    COINES_COMM_INTF_VCOM, /*< communication interface VCOM */
+    COINES_COMM_INTF_BLE /*< communication interface BLE */
 };
 
 /*!
  * @brief MULTIO Pin direction
  */
 enum coines_pin_direction {
-    COINES_PIN_DIRECTION_IN = 0,
-    /*< PIN direction IN */
+    COINES_PIN_DIRECTION_IN = 0, /*< PIN direction IN */
     COINES_PIN_DIRECTION_OUT /*< PIN direction OUT */
 };
 
@@ -372,16 +410,13 @@ enum coines_pin_direction {
  * @brief MULTIO Pin value
  */
 enum coines_pin_value {
-    COINES_PIN_VALUE_LOW = 0,
-    /*< PIN value LOW */
+    COINES_PIN_VALUE_LOW = 0, /*< PIN value LOW */
     COINES_PIN_VALUE_HIGH /*< PIN value HIGH */
 };
 
 enum coines_pin_polarity {
-    COINES_PIN_INT_POLARITY_LOW_TO_HIGH = 1UL,
-    /*< PIN interrupt trigger polarity when Low to High */
-    COINES_PIN_INT_POLARITY_HIGH_TO_LOW = 2UL,
-    /*< PIN interrupt trigger polarity when High to Low */
+    COINES_PIN_INT_POLARITY_LOW_TO_HIGH = 1UL, /*< PIN interrupt trigger polarity when Low to High */
+    COINES_PIN_INT_POLARITY_HIGH_TO_LOW = 2UL, /*< PIN interrupt trigger polarity when High to Low */
     COINES_PIN_INT_POLARITY_TOGGLE = 3UL /*< PIN interrupt trigger polarity toggle */
 };
 
@@ -389,12 +424,9 @@ enum coines_pin_polarity {
  * @brief I2C speed mode settings
  */
 enum coines_i2c_mode {
-    COINES_I2C_STANDARD_MODE = 0x00,
-    /*< I2C speed in standard mode */
-    COINES_I2C_FAST_MODE = 0x01,
-    /*< I2C speed in fast mode */
-    COINES_I2C_SPEED_3_4_MHZ = 0x02,
-    /*< I2C speed in 3.4 MHz */
+    COINES_I2C_STANDARD_MODE = 0x00, /*< I2C speed in standard mode */
+    COINES_I2C_FAST_MODE = 0x01, /*< I2C speed in fast mode */
+    COINES_I2C_SPEED_3_4_MHZ = 0x02, /*< I2C speed in 3.4 MHz */
     COINES_I2C_SPEED_1_7_MHZ = 0x03 /*< I2C speed in 1.7 MHz */
 };
 
@@ -402,8 +434,7 @@ enum coines_i2c_mode {
  * @brief COINES_SDK sampling unit
  */
 enum coines_sampling_unit {
-    COINES_SAMPLING_TIME_IN_MICRO_SEC = 0x01,
-    /*< sampling unit in micro second */
+    COINES_SAMPLING_TIME_IN_MICRO_SEC = 0x01, /*< sampling unit in micro second */
     COINES_SAMPLING_TIME_IN_MILLI_SEC = 0x02 /*< sampling unit in milli second */
 };
 
@@ -413,40 +444,23 @@ enum coines_sampling_unit {
  * > Note - don't change the values
  */
 enum coines_spi_speed {
-    COINES_SPI_SPEED_10_MHZ = 6,
-    /*< 10 MHz */
-    COINES_SPI_SPEED_7_5_MHZ = 8,
-    /*< 7.5 MHz */
-    COINES_SPI_SPEED_6_MHZ = 10,
-    /*< 6 MHz */
-    COINES_SPI_SPEED_5_MHZ = 12,
-    /*< 5 MHz */
-    COINES_SPI_SPEED_3_75_MHZ = 16,
-    /*< 3.75 MHz */
-    COINES_SPI_SPEED_3_MHZ = 20,
-    /*< 3 MHz */
-    COINES_SPI_SPEED_2_5_MHZ = 24,
-    /*< 2.5 MHz */
-    COINES_SPI_SPEED_2_MHZ = 30,
-    /*< 2 MHz */
-    COINES_SPI_SPEED_1_5_MHZ = 40,
-    /*< 1.5 MHz */
-    COINES_SPI_SPEED_1_25_MHZ = 48,
-    /*< 1.25 MHz */
-    COINES_SPI_SPEED_1_2_MHZ = 50,
-    /*< 1.2 MHz */
-    COINES_SPI_SPEED_1_MHZ = 60,
-    /*< 1 MHz */
-    COINES_SPI_SPEED_750_KHZ = 80,
-    /*< 750 kHz */
-    COINES_SPI_SPEED_600_KHZ = 100,
-    /*< 600 kHz */
-    COINES_SPI_SPEED_500_KHZ = 120,
-    /*< 500 kHz */
-    COINES_SPI_SPEED_400_KHZ = 150,
-    /*< 400 kHz */
-    COINES_SPI_SPEED_300_KHZ = 200,
-    /*< 300 kHz */
+    COINES_SPI_SPEED_10_MHZ = 6, /*< 10 MHz */
+    COINES_SPI_SPEED_7_5_MHZ = 8, /*< 7.5 MHz */
+    COINES_SPI_SPEED_6_MHZ = 10, /*< 6 MHz */
+    COINES_SPI_SPEED_5_MHZ = 12, /*< 5 MHz */
+    COINES_SPI_SPEED_3_75_MHZ = 16, /*< 3.75 MHz */
+    COINES_SPI_SPEED_3_MHZ = 20, /*< 3 MHz */
+    COINES_SPI_SPEED_2_5_MHZ = 24, /*< 2.5 MHz */
+    COINES_SPI_SPEED_2_MHZ = 30, /*< 2 MHz */
+    COINES_SPI_SPEED_1_5_MHZ = 40, /*< 1.5 MHz */
+    COINES_SPI_SPEED_1_25_MHZ = 48, /*< 1.25 MHz */
+    COINES_SPI_SPEED_1_2_MHZ = 50, /*< 1.2 MHz */
+    COINES_SPI_SPEED_1_MHZ = 60, /*< 1 MHz */
+    COINES_SPI_SPEED_750_KHZ = 80, /*< 750 kHz */
+    COINES_SPI_SPEED_600_KHZ = 100, /*< 600 kHz */
+    COINES_SPI_SPEED_500_KHZ = 120, /*< 500 kHz */
+    COINES_SPI_SPEED_400_KHZ = 150, /*< 400 kHz */
+    COINES_SPI_SPEED_300_KHZ = 200, /*< 300 kHz */
     COINES_SPI_SPEED_250_KHZ = 240 /*< 250 kHz */
 };
 
@@ -456,145 +470,111 @@ enum coines_spi_speed {
  * > Note - don't change the values
  */
 enum coines_tx_power {
-    COINES_TX_POWER_MINUS_40_DBM = -40,
-    /*< -40 dBm */
-    COINES_TX_POWER_MINUS_20_DBM = -20,
-    /*< -20 dBm */
-    COINES_TX_POWER_MINUS_16_DBM = -16,
-    /*< -16 dBm */
-    COINES_TX_POWER_MINUS_12_DBM = -12,
-    /*< -12 dBm */
-    COINES_TX_POWER_MINUS_8_DBM = -8,
-    /*< -8 dBm */
-    COINES_TX_POWER_MINUS_4_DBM = -4,
-    /*< -4 dBm */
-    COINES_TX_POWER_0_DBM = 0,
-    /*< 0 dBm */
-    COINES_TX_POWER_2_DBM = 2,
-    /*< 2 dBm */
-    COINES_TX_POWER_3_DBM = 3,
-    /*< 3 dBm */
-    COINES_TX_POWER_4_DBM = 4,
-    /*< 4 dBm */
-    COINES_TX_POWER_5_DBM = 5,
-    /*< 5 dBm */
-    COINES_TX_POWER_6_DBM = 6,
-    /*< 6 dBm */
-    COINES_TX_POWER_7_DBM = 7,
-    /*< 7 dBm */
-    COINES_TX_POWER_8_DBM = 8,
-    /*< 8 dBm */
+    COINES_TX_POWER_MINUS_40_DBM = -40, /*< -40 dBm */
+    COINES_TX_POWER_MINUS_20_DBM = -20, /*< -20 dBm */
+    COINES_TX_POWER_MINUS_16_DBM = -16, /*< -16 dBm */
+    COINES_TX_POWER_MINUS_12_DBM = -12, /*< -12 dBm */
+    COINES_TX_POWER_MINUS_8_DBM = -8, /*< -8 dBm */
+    COINES_TX_POWER_MINUS_4_DBM = -4, /*< -4 dBm */
+    COINES_TX_POWER_0_DBM = 0, /*< 0 dBm */
+    COINES_TX_POWER_2_DBM = 2, /*< 2 dBm */
+    COINES_TX_POWER_3_DBM = 3, /*< 3 dBm */
+    COINES_TX_POWER_4_DBM = 4, /*< 4 dBm */
+    COINES_TX_POWER_5_DBM = 5, /*< 5 dBm */
+    COINES_TX_POWER_6_DBM = 6, /*< 6 dBm */
+    COINES_TX_POWER_7_DBM = 7, /*< 7 dBm */
+    COINES_TX_POWER_8_DBM = 8, /*< 8 dBm */
 };
 
 /*!
  *  @brief user configurable Shuttle board pin description
  */
 enum coines_multi_io_pin {
-    COINES_SHUTTLE_PIN_7 = 0x09,
-    /*<  CS pin*/
-    COINES_SHUTTLE_PIN_8 = 0x05,
-    /*<  Multi-IO 5*/
-    COINES_SHUTTLE_PIN_9 = 0x00,
-    /*<  Multi-IO 0*/
-    COINES_SHUTTLE_PIN_14 = 0x01,
-    /*<  Multi-IO 1*/
-    COINES_SHUTTLE_PIN_15 = 0x02,
-    /*<  Multi-IO 2*/
-    COINES_SHUTTLE_PIN_16 = 0x03,
-    /*<  Multi-IO 3*/
-    COINES_SHUTTLE_PIN_19 = 0x08,
-    /*<  Multi-IO 8*/
-    COINES_SHUTTLE_PIN_20 = 0x06,
-    /*<  Multi-IO 6*/
-    COINES_SHUTTLE_PIN_21 = 0x07,
-    /*<  Multi-IO 7*/
-    COINES_SHUTTLE_PIN_22 = 0x04,
-    /*<  Multi-IO 4*/
-
-#if !defined(MCU_APP20)
-    COINES_MINI_SHUTTLE_PIN_1_4 = 0x10,
-    /*<  GPIO0 */
-    COINES_MINI_SHUTTLE_PIN_1_5 = 0x11,
-    /*<  GPIO1 */
-    COINES_MINI_SHUTTLE_PIN_1_6 = 0x12,
-    /*<  GPIO2/INT1 */
-    COINES_MINI_SHUTTLE_PIN_1_7 = 0x13,
-    /*<  GPIO3/INT2 */
-    COINES_MINI_SHUTTLE_PIN_2_5 = 0x14,
-    /*<  GPIO4 */
-    COINES_MINI_SHUTTLE_PIN_2_6 = 0x15,
-    /*<  GPIO5 */
-    COINES_MINI_SHUTTLE_PIN_2_1 = 0x16,
-    /*<  CS */
-    COINES_MINI_SHUTTLE_PIN_2_3 = 0x17,
-    /*<  SDO */
-    COINES_MINI_SHUTTLE_PIN_2_7 = 0x1D,
-    /*<  GPIO6 */
-    COINES_MINI_SHUTTLE_PIN_2_8 = 0x1E,
-    /*<  GPIO7 */
-#endif
+    COINES_SHUTTLE_PIN_7 = 0x09, /*<  CS pin*/
+    COINES_SHUTTLE_PIN_8 = 0x05, /*<  Multi-IO 5*/
+    COINES_SHUTTLE_PIN_9 = 0x00, /*<  Multi-IO 0*/
+    COINES_SHUTTLE_PIN_14 = 0x01, /*<  Multi-IO 1*/
+    COINES_SHUTTLE_PIN_15 = 0x02, /*<  Multi-IO 2*/
+    COINES_SHUTTLE_PIN_16 = 0x03, /*<  Multi-IO 3*/
+    COINES_SHUTTLE_PIN_19 = 0x08, /*<  Multi-IO 8*/
+    COINES_SHUTTLE_PIN_20 = 0x06, /*<  Multi-IO 6*/
+    COINES_SHUTTLE_PIN_21 = 0x07, /*<  Multi-IO 7*/
+    COINES_SHUTTLE_PIN_22 = 0x04, /*<  Multi-IO 4*/
+    COINES_MINI_SHUTTLE_PIN_1_4 = 0x10, /*<  GPIO0 */
+    COINES_MINI_SHUTTLE_PIN_1_5 = 0x11, /*<  GPIO1 */
+    COINES_MINI_SHUTTLE_PIN_1_6 = 0x12, /*<  GPIO2/INT1 */
+    COINES_MINI_SHUTTLE_PIN_1_7 = 0x13, /*<  GPIO3/INT2 */
+    COINES_MINI_SHUTTLE_PIN_2_5 = 0x14, /*<  GPIO4 */
+    COINES_MINI_SHUTTLE_PIN_2_6 = 0x15, /*<  GPIO5 */
+    COINES_MINI_SHUTTLE_PIN_2_1 = 0x16, /*<  CS */
+    COINES_MINI_SHUTTLE_PIN_2_3 = 0x17, /*<  SDO */
+    COINES_MINI_SHUTTLE_PIN_2_7 = 0x1D, /*<  GPIO6 */
+    COINES_MINI_SHUTTLE_PIN_2_8 = 0x1E, /*<  GPIO7 */
 #if defined(MCU_APP30)
-    COINES_APP30_LED_R = 0x18,
-    /*<  red LED */
-    COINES_APP30_LED_G = 0x19,
-    /*<  green LED */
-    COINES_APP30_LED_B = 0x1A,
-    /*<  blue LED */
-    COINES_APP30_BUTTON_1 = 0x1B,
-    /*< button 1 */
-    COINES_APP30_BUTTON_2 = 0x1C,
-    /*< button 2 */
+    COINES_APP30_LED_R = 0x18, /*<  red LED */
+    COINES_APP30_LED_G = 0x19, /*<  green LED */
+    COINES_APP30_LED_B = 0x1A, /*<  blue LED */
+    COINES_APP30_BUTTON_1 = 0x1B, /*< button 1 */
+    COINES_APP30_BUTTON_2 = 0x1C, /*< button 2 */
 #endif
 #if defined(MCU_NICLA)
-    COINES_NICLA_BUTTON_RESET = 0x1B,
-    /*< button 1 */
+    COINES_NICLA_BUTTON_RESET = 0x1B, /*< button 1 */
     COINES_NICLA_CD_PIN = 0x1C,
     /*CD line*/
 #endif
     COINES_SHUTTLE_PIN_SDO = 0x1F,
 #if defined(MCU_APP31)
-    COINES_APP31_LED_R = 0x18,
-    /*<  red LED */
-    COINES_APP31_LED_G = 0x19,
-    /*<  green LED */
-    COINES_APP31_LED_B = 0x1A,
-    /*<  blue LED */
-    COINES_APP31_BUTTON_3 = 0x1B,
-    /*< button 3 */
-    COINES_APP31_BUTTON_2 = 0x1C,
-    /*< button 2 */
-    COINES_APP31_RESET_INT = 0x20,
-    /*< Reset from PMIC */
-    COINES_APP31_LSLDO = 0x21,
-    /*< Load switch LDO pin */
-    COINES_APP31_CD = 0x22,
-    /*< PMIC chip disable pin */
-    COINES_APP31_P_INT = 0x23,
-    /*< Interrupt line from PMIC */
-    COINES_APP31_VDDIO_EN = 0x24,
-    /*< VDDIO_Sensor pin */
-    COINES_APP31_VDD_EN = 0x25,
-    /*< VDD_Sensor pin */
-    COINES_APP31_LS_EN = 0x26,
-    /*< Level Shifter pin*/
-    COINES_APP31_VIN_DEC = 0x27,
-    /*< VIN detection pin*/
-    COINES_SHUTTLE_PIN_MAX = 0x28
-#else
-    COINES_SHUTTLE_PIN_MAX = 0x21
+    COINES_APP31_LED_R = 0x18, /*<  red LED */
+    COINES_APP31_LED_G = 0x19, /*<  green LED */
+    COINES_APP31_LED_B = 0x1A, /*<  blue LED */
+    COINES_APP31_BUTTON_3 = 0x1B, /*< button 3 */
+    COINES_APP31_BUTTON_2 = 0x1C, /*< button 2 */
+    COINES_APP31_RESET_INT = 0x20, /*< Reset from PMIC */
+    COINES_APP31_LSLDO = 0x21, /*< Load switch LDO pin */
+    COINES_APP31_CD = 0x22, /*< PMIC chip disable pin */
+    COINES_APP31_P_INT = 0x23, /*< Interrupt line from PMIC */
+    COINES_APP31_VDDIO_EN = 0x24, /*< VDDIO_Sensor pin */
+    COINES_APP31_VDD_EN = 0x25, /*< VDD_Sensor pin */
+    COINES_APP31_LS_EN = 0x26, /*< Level Shifter pin*/
+    COINES_APP31_VIN_DEC = 0x27, /*< VIN detection pin*/
 #endif
+
+    /*Hearable Board Specific Pins*/
+    COINES_HEARABLE_SHUTTLE_PIN_1 = 0x28,  /*<  GPIO1 */
+    COINES_HEARABLE_SHUTTLE_PIN_2 = 0x29,  /*<  GPIO_SDI */
+    COINES_HEARABLE_SHUTTLE_PIN_3 = 0x2A,  /*<  GPIO2 */
+    COINES_HEARABLE_SHUTTLE_PIN_4 = 0x2B,  /*<  GPIO_SDO */
+    COINES_HEARABLE_SHUTTLE_PIN_5 = 0x2C,  /*<  GPIO3 */
+    COINES_HEARABLE_SHUTTLE_PIN_6 = 0x2D,  /*<  GPIO_SCK */
+    COINES_HEARABLE_SHUTTLE_PIN_7 = 0x2E,  /*<  GPIO4 */
+    COINES_HEARABLE_SHUTTLE_PIN_8 = 0x2F,  /*<  GPIO_CS0 */
+    COINES_HEARABLE_SHUTTLE_PIN_9 = 0x30,  /*<  I2C_SDA */
+    COINES_HEARABLE_SHUTTLE_PIN_10 = 0x31, /*<  GPIO_CS1 */
+    COINES_HEARABLE_SHUTTLE_PIN_11 = 0x32, /*<  I2C_SCL */
+    COINES_HEARABLE_SHUTTLE_PIN_12 = 0x33, /*<  GPIO_CS2 */ 
+    COINES_HEARABLE_SHUTTLE_PIN_13 = 0x34, /*<  INT0 */
+    COINES_HEARABLE_SHUTTLE_PIN_14 = 0x35, /*<  UART_TX */ 
+    COINES_HEARABLE_SHUTTLE_PIN_15 = 0x36, /*<  INT1 */
+    COINES_HEARABLE_SHUTTLE_PIN_16 = 0x37, /*<  UART_RX */ 
+    COINES_HEARABLE_SHUTTLE_PIN_17 = 0x38, /*<  INT2 */ 
+    
+    /*<  red LED */
+    COINES_HEAR3X_LED_R         = 0x39, /*<  MCU_LED_R */
+   
+    COINES_CHRG_CD              = 0x3A, /*<  GPIO_CHRG_CD */
+    COINES_CHRG_LSCTRL          = 0x3B, /*<  GPIO_CHRG_LSCTRL */
+
+    COINES_SHUTTLE_PIN_MAX = 0x3C
+
 };
 
 /*!
  * @brief SPI mode settings
  */
 enum coines_spi_mode {
-    COINES_SPI_MODE0 = 0x00,
-    /*< SPI Mode 0: CPOL=0; CPHA=0 */
-    COINES_SPI_MODE1 = 0x01,
-    /*< SPI Mode 1: CPOL=0; CPHA=1 */
-    COINES_SPI_MODE2 = 0x02,
-    /*< SPI Mode 2: CPOL=1; CPHA=0 */
+    COINES_SPI_MODE0 = 0x00, /*< SPI Mode 0: CPOL=0; CPHA=0 */
+    COINES_SPI_MODE1 = 0x01, /*< SPI Mode 1: CPOL=0; CPHA=1 */
+    COINES_SPI_MODE2 = 0x02, /*< SPI Mode 2: CPOL=1; CPHA=0 */
     COINES_SPI_MODE3 = 0x03 /*< SPI Mode 3: CPOL=1; CPHA=1 */
 };
 
@@ -602,8 +582,7 @@ enum coines_spi_mode {
  * @brief SPI Number of bits per transfer
  */
 enum coines_spi_transfer_bits {
-    COINES_SPI_TRANSFER_8BIT = 8,
-    /**< Transfer 8 bit */
+    COINES_SPI_TRANSFER_8BIT = 8, /**< Transfer 8 bit */
 
     /* Before selecting the below 16 bit, ensure that,
      * the intended sensor supports 16bit register read/write
@@ -612,11 +591,22 @@ enum coines_spi_transfer_bits {
 };
 
 /*!
+ * @brief I2C Number of bits per transfer
+ */
+enum coines_i2c_transfer_bits {
+    COINES_I2C_TRANSFER_8BIT = 8, /**< Transfer 8 bit */
+
+    /* Before selecting the below 16 bit, ensure that,
+     * the intended sensor supports 16bit register read/write
+     */
+    COINES_I2C_TRANSFER_16BIT = 16 /**< Transfer 16 bit */
+};
+
+/*!
  * @brief interface type
  */
 enum coines_sensor_intf {
-    COINES_SENSOR_INTF_SPI,
-    /*< SPI Interface */
+    COINES_SENSOR_INTF_SPI, /*< SPI Interface */
     COINES_SENSOR_INTF_I2C /*< I2C Interface */
 };
 
@@ -624,10 +614,9 @@ enum coines_sensor_intf {
  * @brief i2c bus
  */
 enum coines_i2c_bus {
-    COINES_I2C_BUS_0,
-    /*< I2C bus 0 */
-    COINES_I2C_BUS_1,
-    /*< I2C bus 1 */
+    COINES_I2C_BUS_0, /*< I2C bus 0 */
+    COINES_I2C_BUS_1, /*< I2C bus 1 */
+    COINES_I2C_BUS_INT, /*< I2C internal bus */
     COINES_I2C_BUS_MAX
 };
 
@@ -635,10 +624,9 @@ enum coines_i2c_bus {
  * @brief spi bus
  */
 enum coines_spi_bus {
-    COINES_SPI_BUS_0,
-    /*< SPI bus 0 */
-    COINES_SPI_BUS_1,
-    /*< SPI bus 1 */
+    COINES_SPI_BUS_0, /*< SPI bus 0 */
+    COINES_SPI_BUS_1, /*< SPI bus 1 */
+    COINES_SPI_BUS_INT, /*< SPI internal bus */
     COINES_SPI_BUS_MAX
 };
 
@@ -646,37 +634,28 @@ enum coines_spi_bus {
  * @brief UART instance
  */
 enum coines_uart_instance {
-    COINES_UART_0,
-    /*< UART instance 0 */
-    COINES_UART_1
-    /*< UART instance 1 */
+    COINES_UART_0, /*< UART instance 0 */
+    COINES_UART_1 /*< UART instance 1 */
 };
 
 /*!
  * @brief timer instance
  */
 enum coines_timer_instance {
-    COINES_TIMER_INSTANCE_0,
-    /*< instance 0 */
+    COINES_TIMER_INSTANCE_0, /*< instance 0 */
     COINES_TIMER_INSTANCE_1,
 #if defined(MCU_NICLA)
-
-    /*< instance 1 */
-    COINES_TIMER_INSTANCE_2,
+    COINES_TIMER_INSTANCE_2, /*< instance 1 */
 #endif
-
-    /*< instance 2 */
-    COINES_TIMER_INSTANCE_MAX
+    COINES_TIMER_INSTANCE_MAX /*< instance 2 */
 };
 
 /*!
  * @brief timer configuration
  */
 enum coines_timer_config {
-    COINES_TIMER_STOP,
-    /*< TIMER Stop */
-    COINES_TIMER_START,
-    /*< TIMER Start */
+    COINES_TIMER_STOP, /*< TIMER Stop */
+    COINES_TIMER_START, /*< TIMER Start */
     COINES_TIMER_RESET /*< TIMER Reset */
 };
 
@@ -684,8 +663,7 @@ enum coines_timer_config {
  * @brief times stamp config
  */
 enum coines_time_stamp_config {
-    COINES_TIMESTAMP_ENABLE = 0x03,
-    /*< TIMESTAMP Enable */
+    COINES_TIMESTAMP_ENABLE = 0x03, /*< TIMESTAMP Enable */
     COINES_TIMESTAMP_DISABLE = 0x04 /*< TIMESTAMP Disable */
 };
 
@@ -693,17 +671,16 @@ enum coines_time_stamp_config {
  * @brief COINES_SDK streaming mode
  */
 enum coines_streaming_mode {
-    COINES_STREAMING_MODE_POLLING,
-    /*< Polling mode streaming */
-    COINES_STREAMING_MODE_INTERRUPT /*< Interrupt mode streaming */
+    COINES_STREAMING_MODE_POLLING, /*< Polling mode streaming */
+    COINES_STREAMING_MODE_INTERRUPT, /*< Interrupt mode streaming */
+    COINES_STREAMING_MODE_DMA_INTERRUPT /*< DMA Interrupt mode streaming */
 };
 
 /*!
  * @brief COINES_SDK led state
  */
 enum coines_led_state {
-    COINES_LED_STATE_ON = 0,
-    /*< Led state ON*/
+    COINES_LED_STATE_ON = 0, /*< Led state ON*/
     COINES_LED_STATE_OFF /*< Led state OFF */
 };
 
@@ -711,10 +688,8 @@ enum coines_led_state {
  * @brief COINES_SDK led
  */
 enum coines_led {
-    COINES_LED_RED,
-    /*< Red Led */
-    COINES_LED_GREEN,
-    /*< Green Led */
+    COINES_LED_RED, /*< Red Led */
+    COINES_LED_GREEN, /*< Green Led */
     COINES_LED_BLUE /*< Blue Led */
 };
 
@@ -725,7 +700,7 @@ struct coines_board_info
 {
     uint16_t hardware_id; /*< Board hardware ID */
     uint16_t software_id; /*< Board software ID */
-    uint8_t board; /*< Type of the board like APP2.0, Arduino Due */
+    uint8_t board; /*< Type of the board like APP3.0 */
     uint16_t shuttle_id; /*< Shuttle ID of the sensor connected */
     uint8_t eeprom_id[EEPROM_ID_SIZE]; /*< EEPROM ID of the sensor shuttle connected */
 };
@@ -751,6 +726,17 @@ struct coines_streaming_clear_on_write
     uint8_t data_buf[255]; /*< data chunks */
 };
 
+/**
+ * @brief This struct represents a DMA streaming configuration.
+ */
+struct coines_stream_dma
+{
+    uint16_t ctlr_addr; /**< DMA controller address */
+    uint16_t startaddr_cmd; /**< Starting address command for DMA */
+    uint16_t read_addr; /**< Read address for DMA */
+    uint8_t read_len; /**< Length of the data to read from DMA */
+};
+
 /*!
  * @brief streaming config settings
  */
@@ -768,7 +754,8 @@ struct coines_streaming_config
     uint8_t spi_type; /*< spi type */
     uint8_t clear_on_write; /*< clear on write */
     uint8_t hw_pin_state; /*< hardware pin state active low/high */
-    struct coines_streaming_clear_on_write clear_on_write_config;
+    struct coines_streaming_clear_on_write clear_on_write_config; /*< clear on write configuration */
+    struct coines_stream_dma dma_config; /*< DMA configuration */
     uint8_t intline_count; /*< interrupt line count */
     uint8_t intline_info[COINES_MAX_INT_LINE]; /*< interrupt line number */
 };
@@ -807,18 +794,17 @@ struct ble_peripheral_info
  * @brief Pin interrupt modes
  */
 enum coines_pin_interrupt_mode {
-    COINES_PIN_INTERRUPT_CHANGE,
-    /*< Trigger interrupt on pin state change */
-    COINES_PIN_INTERRUPT_RISING_EDGE,
-    /*< Trigger interrupt when pin changes from low to high */
-    COINES_PIN_INTERRUPT_FALLING_EDGE,
-    /*< Trigger interrupt when pin changes from high to low */
+    COINES_PIN_INTERRUPT_CHANGE, /*< Trigger interrupt on pin state change */
+    COINES_PIN_INTERRUPT_RISING_EDGE, /*< Trigger interrupt when pin changes from low to high */
+    COINES_PIN_INTERRUPT_FALLING_EDGE, /*< Trigger interrupt when pin changes from high to low */
     COINES_PIN_INTERRUPT_MODE_MAXIMUM = 4
 };
 
 struct coines_comm_intf_config
 {
-    uint32_t uart_baud_rate;
+   uint32_t uart_baud_rate;
+   coines_intf_rx_callback intf_rx_complete_callback;
+   coines_intf_tx_callback intf_tx_complete_callback;
 };
 
 /*!
@@ -826,20 +812,16 @@ struct coines_comm_intf_config
  */
 enum coines_uart_parity
 {
-    COINES_UART_PARITY_NONE,
-    /* Parity not included */
-    COINES_UART_PARITY_EVEN
-    /* Parity included */
+    COINES_UART_PARITY_NONE, /* Parity not included */
+    COINES_UART_PARITY_EVEN /* Parity included */
 };
 
 /**@brief UART Flow Control modes for the peripheral.
  */
 enum coines_uart_flow_control
 {
-    COINES_UART_FLOW_CONTROL_DISABLED,
-    /*< UART Hw Flow Control is disabled. */
-    COINES_UART_FLOW_CONTROL_ENABLED
-    /*< Standard UART Hw Flow Control is enabled. */
+    COINES_UART_FLOW_CONTROL_DISABLED, /*< UART Hw Flow Control is disabled. */
+    COINES_UART_FLOW_CONTROL_ENABLED /*< Standard UART Hw Flow Control is enabled. */
 };
 
 
@@ -849,7 +831,7 @@ enum coines_uart_flow_control
 #if defined(PC)
 
 /*!
- * @brief This API is used to COINES_SDK error codes to error strings
+ * @brief This API is to return a descriptive error string corresponding to the given error code.
  *
  * @param[in]  error_code     : error_code
  *
@@ -868,7 +850,7 @@ const char *get_coines_error_str(int16_t error_code);
  * @retval 0 -> Success.
  * @retval Any non zero value -> Fail.
  */
-int16_t coines_scan_ble_devices(struct ble_peripheral_info *ble_info, uint8_t *peripheral_count, size_t scan_timeout_ms);
+int16_t coines_scan_ble_devices(struct ble_peripheral_info *ble_info, uint8_t *peripheral_count, uint32_t scan_timeout_ms);
 
 #endif
 
@@ -958,8 +940,8 @@ int16_t coines_get_pin_config(enum coines_multi_io_pin pin_number,
  *  @param[in] vdd_millivolt     : VDD voltage to be set in sensor.
  *  @param[in] vddio_millivolt   : VDDIO voltage to be set in sensor.
  *
- *  @note In APP2.0 board, voltage level of 0 or 3300mV is supported.
- *        In APP3.0 board, voltage levels of 0, 1800mV and 2800mV are supported.
+ *  @note In APP3.0 board, voltage levels of 0, 1800mV and 2800mV are supported.
+ *        In APP3.1 board, voltage levels of 0, as well as a range 1800mV to 3300mV, are supported.
  *
  *  @return Results of API execution status.
  *  @retval 0 -> Success
@@ -1063,26 +1045,10 @@ int8_t coines_write_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint8_t reg_a
 int8_t coines_read_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count);
 
 /*!
- *  @brief This API is used to write 16-bit register data on the SPI device.
- *
- *  @param[in] bus      : spi bus.
- *  @param[in] cs       : Chip select pin number for SPI write.
- *  @param[in] reg_addr : Starting address for writing the data.
- *  @param[in] reg_data : Data to be written.
- *  @param[in] count    : Number of bytes to write.
- *
- *  @return Results of API execution status.
- *  @retval 0 -> Success
- *  @retval Any non zero value -> Fail
- *
- */
-int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_addr, void *reg_data, uint16_t count);
-
-/*!
  *  @brief This API is used to write 8-bit register data on the SPI device.
  *
  *  @param[in] bus      : spi bus.
- *  @param[in] dev_addr : Chip select pin number for SPI write.
+ *  @param[in] cs_pin   : Chip select pin number for SPI write.
  *  @param[in] reg_addr : Starting address for writing the data.
  *  @param[in] reg_data : Data to be written.
  *  @param[in] count    : Number of bytes to write.
@@ -1092,29 +1058,13 @@ int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_
  *  @retval Any non zero value -> Fail
  *
  */
-int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count);
-
-/*!
- *  @brief This API is used to read 16-bit register data from the SPI device.
- *
- *  @param[in] bus       : spi bus.
- *  @param[in] cs        : Chip select pin number for SPI read.
- *  @param[in] reg_addr  : Starting address for reading the data.
- *  @param[out] reg_data : Data read from the sensor.
- *  @param[in] count     : Number of bytes to read.
- *
- *  @return Results of API execution status.
- *  @retval 0 -> Success
- *  @retval Any non zero value -> Fail
- *
- */
-int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_addr, void *reg_data, uint16_t count);
+int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count);
 
 /*!
  *  @brief This API is used to read the data in SPI communication.
  *
  *  @param[in] bus      : spi bus.
- *  @param[in] dev_addr : Chip select pin number for SPI read.
+ *  @param[in] cs_pin   : Chip select pin number for SPI read.
  *  @param[in] reg_addr : Starting address for reading the data.
  *  @param[out] reg_data : Data read from the sensor.
  *  @param[in] count    : Number of bytes to read.
@@ -1124,7 +1074,78 @@ int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_a
  *  @retval Any non zero value -> Fail
  *
  */
-int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count);
+int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count);
+
+#if !defined(MCU_NICLA)
+
+/*!
+ *  @brief This API is used to write 16-bit register data on the I2C device.
+ *
+ *  @param[in] bus      : i2c bus.
+ *  @param[in] dev_addr : Device address for I2C write.
+ *  @param[in] reg_addr : Starting address for writing the data.
+ *  @param[in] reg_data : Data to be written.
+ *  @param[in] count    : Number of bytes to write.
+ *  @param[in] i2c_transfer_bits : bits to transfer
+ *
+ *  @return Results of API execution status.
+ *  @retval 0 -> Success
+ *  @retval Any non zero value -> Fail
+ *
+ */
+int8_t coines_write_16bit_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_i2c_transfer_bits i2c_transfer_bits);
+
+/*!
+ *  @brief This API is used to read 16-bit register data from the I2C device.
+ *
+ *  @param[in] bus      : i2c bus.
+ *  @param[in] dev_addr  : Device address for I2C read.
+ *  @param[in] reg_addr  : Starting address for reading the data.
+ *  @param[out] reg_data : Data read from the sensor.
+ *  @param[in] count     : Number of bytes to read.
+ *  @param[in] i2c_transfer_bits : bits to transfer
+ *
+ *  @return Results of API execution status.
+ *  @retval 0 -> Success
+ *  @retval Any non zero value -> Fail
+ *
+ */
+int8_t coines_read_16bit_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_i2c_transfer_bits i2c_transfer_bits);
+
+/*!
+ *  @brief This API is used to write 16-bit register data on the SPI device.
+ *
+ *  @param[in] bus      : spi bus.
+ *  @param[in] cs_pin : Chip select pin number for SPI write.
+ *  @param[in] reg_addr : Starting address for writing the data.
+ *  @param[in] reg_data : Data to be written.
+ *  @param[in] count    : Number of bytes to write.
+ *  @param[in] spi_transfer_bits: bits to transfer
+ *
+ *  @return Results of API execution status.
+ *  @retval 0 -> Success
+ *  @retval Any non zero value -> Fail
+ *
+ */
+int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits);
+
+/*!
+ *  @brief This API is used to read 16-bit register data from the SPI device.
+ *
+ *  @param[in] bus       : spi bus.
+ *  @param[in] cs_pin : Chip select pin number for SPI read.
+ *  @param[in] reg_addr  : Starting address for reading the data.
+ *  @param[out] reg_data : Data read from the sensor.
+ *  @param[in] count     : Number of bytes to read.
+ *  @param[in] spi_transfer_bits : bits to transfer
+ *
+ *  @return Results of API execution status.
+ *  @retval 0 -> Success
+ *  @retval Any non zero value -> Fail
+ *
+ */
+int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits);
+#endif
 
 /*!
  *  @brief This API is used for introducing a delay in milliseconds
@@ -1144,7 +1165,7 @@ void coines_delay_msec(uint32_t delay_ms);
  */
 void coines_delay_usec(uint32_t delay_us);
 
-#if !defined(MCU_NICLA) && !defined(MCU_APP20)
+#if !defined(MCU_NICLA)
 
 /*!
  * @brief This API is used to send the streaming settings to the board.
@@ -1280,7 +1301,7 @@ void coines_delay_realtime_usec(uint32_t period);
  * @param[in]   : None
  * @return      : counter(RTC) reference time in usec
  * */
-uint32_t coines_get_realtime_usec(void);
+uint64_t coines_get_realtime_usec(void);
 
 /*!
  * @brief Attaches a interrupt to a Multi-IO pin
@@ -1337,7 +1358,7 @@ int16_t coines_detach_timed_interrupt(enum coines_multi_io_pin pin_number);
  *
  * @return pointer to version string
  */
-const char* coines_get_version();
+const char* coines_get_version(void);
 
 /*!
  * @brief Return the number of bytes available in the read buffer of the interface
@@ -1379,6 +1400,7 @@ uint16_t coines_read_intf(enum coines_comm_intf intf, void *buffer, uint16_t len
  */
 void coines_write_intf(enum coines_comm_intf intf, void *buffer, uint16_t len);
 
+#if (defined(MCU_APP30)||defined(MCU_APP31)||defined(MCU_NICLA))
 /*!
  * @brief This API is used to read the temperature sensor data.
  *
@@ -1389,7 +1411,7 @@ void coines_write_intf(enum coines_comm_intf intf, void *buffer, uint16_t len);
  * @retval Any non zero value -> Fail
  */
 int16_t coines_read_temp_data(float *temp_data);
-
+#endif
 /*!
  * @brief This API is used to read the battery status .
  *
@@ -1476,8 +1498,6 @@ int16_t coines_set_led(enum coines_led led, enum coines_led_state led_state);
  */
 void coines_flush_intf(enum coines_comm_intf intf);
 
-#if !defined(MCU_APP20)
-
 /*!
  *  @brief This API is used to write the content into shuttle eeprom.
  *
@@ -1509,9 +1529,38 @@ int16_t coines_shuttle_eeprom_read(uint16_t start_addr, uint8_t *buffer, uint16_
  */
 void coines_yield(void);
 
-#endif
+#if (defined(MCU_APP30) || defined(MCU_APP31) || defined(MCU_HEAR3X))
+/**
+ * @brief Reads data from the specified communication interface in a non-blocking manner.
+ *        Callback should be register with coines_open_comm_intf()
+ * This function reads data from either a USB or BLE interface without blocking the execution.
+ * It checks the specified interface and reads data accordingly.
+ *
+ * @param[in] intf The communication interface to read from. This can be either:
+ *                 - COINES_COMM_INTF_USB: For USB interface
+ *                 - COINES_COMM_INTF_BLE: For BLE interface
+ *
+ * @return The number of bytes read from the specified interface.
+ */
+uint16_t coines_read_intf_non_block(enum coines_comm_intf intf, void *buffer, uint16_t len);
 
-#if (defined(MCU_APP30) || defined(MCU_APP31))
+/**
+ * @brief Writes data to the specified communication interface in a non-blocking manner.
+ *        Callback should be register with coines_open_comm_intf()
+ * This function attempts to write data to either a USB or BLE interface without blocking.
+ * For USB, it checks if the serial connection is established and if there are no pending
+ * transmissions before writing. For BLE, it ensures the data length does not exceed the
+ * maximum transmission unit (MTU) and sends the payload via the BLE service.
+ *
+ * @param[in] intf The communication interface to write to. This can be either COINES_COMM_INTF_USB or COINES_COMM_INTF_BLE.
+ * @param[in] buffer Pointer to the data buffer to be written.
+ * @param[in] len The length of the data to be written.
+ *
+ * @return The number of bytes successfully written. If the interface is USB and there is a pending transmission,
+ *         the function returns 0. For BLE, it returns the number of bytes written, which is the minimum of the
+ *         provided length and the BLE MTU.
+ */
+uint16_t coines_write_intf_non_block(enum coines_comm_intf intf, void *buffer, uint16_t len);
 
 /**
  * @brief This API is used to configure the I2S bus to match the TDM configuration
@@ -1580,7 +1629,7 @@ int8_t coines_uart_write(enum coines_uart_instance uart_instance, uint8_t *buffe
  */
 void coines_execute_critical_region(coines_critical_callback callback);
 
-#if defined(MCU_NICLA)
+#if defined(MCU_NICLA) || defined(MCU_HEAR3X)
 
 /*!
  * @brief This API is used to switch off the board

@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -28,7 +28,7 @@
  *
  * @file    app_switch.c
  * @date    Jan 28, 2019
- * @brief   This file contains support for switching applications in APP2.0/APP3.X Board
+ * @brief   This file contains support for switching applications in APP3.X Board
  *
  */
 
@@ -56,26 +56,27 @@
 /**********************************************************************************/
 /* local macro definitions */
 /**********************************************************************************/
-#define APP20_DD_FW_ADDR       (0x00410000)
 #define USB_DFU_BL_ADDR        (0) /* It is actually not at 0x0 ! */
-#define APP20_EXAMPLE_ADDR     (0x00440000)
 #define APP30_MTP_FW_ADDR      (0x28000)
-#define APP31_MTP_FW_ADDR      (0x28000)
+#define APP31_MTP_FW_ADDR      (0xE3800)
+#define HEAR3X_MTP_FW_ADDR     (0x28000)
 
 #define APP_SWITCH_FEATURE     (0x30)
 
 #define ROBERT_BOSCH_USB_VID   (0x108C)
 
-#define BST_APP20_CDC_USB_PID  (0xAB2C)
-#define BST_APP20_DFU_USB_PID  (0xAB2D)
-
 #define BST_APP30_CDC_USB_PID  (0xAB3C)
 #define BST_APP30_DFU_USB_PID  (0xAB3D)
+#define BST_APP30_MTP_USB_PID  (0xAB3F)
 
 #define BST_APP31_CDC_USB_PID  (0xAB38)
 #define BST_APP31_DFU_USB_PID  (0xAB39)
+#define BST_APP31_MTP_USB_PID  (0xAB3A)
 
-#define APP20_BOARD            (3)
+#define BST_HEAR3X_CDC_USB_PID (0x4B3C)
+#define BST_HEAR3X_DFU_USB_PID (0x4B3D)
+#define BST_HEAR3X_MTP_USB_PID (0x4B3F)
+
 #define APP30_BOARD            (5)
 #define TIMEOUT                (1000)
 
@@ -95,7 +96,6 @@ char *port_name = NULL;
 static int usb_connected(char *port_name, uint16_t vid, uint16_t pid);
 static void usb_cdc_acm_open_close(uint32_t baud_rate, uint16_t vid, uint16_t pid);
 
-
 #ifdef PLATFORM_WINDOWS
 static void create_serial_handle(uint32_t baud_rate, char *COM_PortName);
 
@@ -108,6 +108,12 @@ static void wait_for_dfu_mode_entry(uint32_t app_address);
 static int detect_connected_usb_device();
 static void switch_mode(uint16_t pid);
 
+#ifdef PLATFORM_LINUX
+static libusb_device *device = NULL;
+static void list_devices();
+
+#endif
+
 int main(int argc, char *argv[])
 {
     int16_t rslt;
@@ -117,13 +123,21 @@ int main(int argc, char *argv[])
     {
         printf("\n Invalid/Insufficient arguments !!");
         printf("\n\n %s <application name / start address>", argv[0]);
-        printf("\n\n Supported Application names in APP2.0 Board [ dd_fw | usb_dfu_bl | example ]");
         printf("\n\n Supported Application names in APP3.0 Board [ usb_dfu_bl | usb_mtp ]");
         printf("\n\n Eg: 1. %s 0x440000", argv[0]);
         printf("\n     2. %s example", argv[0]);
         printf("\n");
         exit(EXIT_FAILURE);
     }
+
+#ifdef PLATFORM_LINUX
+    if (strcmp(argv[1], "-l") == 0)
+    {
+        list_devices();
+        exit(EXIT_SUCCESS);
+    }
+
+#endif
 
     app_address = strtol(argv[1], NULL, 0);
     port_name = argv[2];
@@ -139,7 +153,7 @@ int main(int argc, char *argv[])
 
         coines_get_board_info(&board_info);
 
-        if (board_info.software_id < 0x31 && board_info.board == APP20_BOARD)
+        if (board_info.software_id < 0x31)
         {
             printf("\n\n Application Switch Feature not supported !"
                    "\n Please upgrade to the latest DD2.0 firmware.\n");
@@ -165,9 +179,12 @@ static void jump_to(uint32_t addr)
 
 static bool is_board_switched_dfu_mode(void)
 {
-    if (usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP20_DFU_USB_PID)
-        || usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP30_DFU_USB_PID)
-        || usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP31_DFU_USB_PID))
+    if (usb_connected(NULL, ROBERT_BOSCH_USB_VID,
+                      BST_APP30_DFU_USB_PID) || 
+        usb_connected(NULL, ROBERT_BOSCH_USB_VID, 
+                      BST_APP31_DFU_USB_PID) || 
+        usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_HEAR3X_DFU_USB_PID)
+                      )
     {
         return true;
     }
@@ -179,21 +196,21 @@ static void set_app_address(uint32_t *app_address, char* argv[])
 {
     if (*app_address == 0)
     {
-        if (strcmp(argv[1], "dd_fw") == 0)
+        if ((strcmp(argv[1], "usb_dfu_bl") == 0) || (strcmp(argv[1], "0") == 0))
         {
-            *app_address = APP20_DD_FW_ADDR;
-        }
-        else if ((strcmp(argv[1], "usb_dfu_bl") == 0) || (strcmp(argv[1], "0") == 0))
-        {
-            *app_address = USB_DFU_BL_ADDR;
-        }
-        else if (strcmp(argv[1], "example") == 0)
-        {
-            *app_address = APP20_EXAMPLE_ADDR;
+            *app_address = USB_DFU_BL_ADDR;            
         }
         else if (strcmp(argv[1], "usb_mtp") == 0)
         {
-            *app_address = APP30_MTP_FW_ADDR;
+            if (usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP31_DFU_USB_PID) ||
+                usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP31_CDC_USB_PID))
+            {
+                *app_address = APP31_MTP_FW_ADDR;
+            }
+            else 
+            {
+                *app_address = APP30_MTP_FW_ADDR;
+            }
         }
         else
         {
@@ -204,6 +221,7 @@ static void set_app_address(uint32_t *app_address, char* argv[])
 
 static int detect_connected_usb_device()
 {
+    
     if (usb_connected(port_name, ROBERT_BOSCH_USB_VID, BST_APP31_CDC_USB_PID))
     {
         return BST_APP31_CDC_USB_PID;
@@ -212,17 +230,38 @@ static int detect_connected_usb_device()
     {
         return BST_APP30_CDC_USB_PID;
     }
-    else if (usb_connected(port_name, ROBERT_BOSCH_USB_VID, BST_APP20_CDC_USB_PID))
+    else if(usb_connected(port_name, ROBERT_BOSCH_USB_VID, BST_HEAR3X_CDC_USB_PID))
     {
-        return BST_APP20_CDC_USB_PID;
+        
+        return BST_HEAR3X_CDC_USB_PID;
     }
-    else if (usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP20_DFU_USB_PID)
-             || usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP30_DFU_USB_PID)
-             || usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_APP31_DFU_USB_PID))
-    {
+    else if (usb_connected(NULL, ROBERT_BOSCH_USB_VID,
+                           BST_APP30_DFU_USB_PID) || 
+             usb_connected(NULL, ROBERT_BOSCH_USB_VID, 
+                           BST_APP31_DFU_USB_PID) || 
+             usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_HEAR3X_DFU_USB_PID))
+    {   
+
         if ((app_address == APP30_MTP_FW_ADDR) || (app_address == APP31_MTP_FW_ADDR))
         {
             printf("\n Switching from DFU to MTP mode is not allowed ! \n");
+
+            return EXIT_FAILURE;
+        }
+
+        exit(EXIT_SUCCESS);
+    }
+    else if (usb_connected(NULL, ROBERT_BOSCH_USB_VID,
+                           BST_APP30_MTP_USB_PID) || 
+             usb_connected(NULL, ROBERT_BOSCH_USB_VID, 
+                           BST_APP31_MTP_USB_PID) || 
+             usb_connected(NULL, ROBERT_BOSCH_USB_VID, BST_HEAR3X_MTP_USB_PID))
+    {   
+
+        if (app_address == USB_DFU_BL_ADDR)
+        {
+            printf("\n Switching from MTP to DFU mode is not allowed ! \n");
+
             return EXIT_FAILURE;
         }
 
@@ -231,6 +270,7 @@ static int detect_connected_usb_device()
     else
     {
         printf("\n\n Application Board in use (or) seems to be unconnected !\n");
+
         return EXIT_FAILURE;
     }
 }
@@ -241,7 +281,7 @@ static void wait_for_dfu_mode_entry(uint32_t app_address)
 
     if (app_address == USB_DFU_BL_ADDR)
     {
-        /*Wait till APP2.0/APP3.x Board switches to DFU mode*/
+        /*Wait till APP3.x Board switches to DFU mode*/
         start_time = coines_get_millis();
         while (coines_get_millis() <= (start_time + TIMEOUT))
         {
@@ -262,11 +302,6 @@ static void switch_mode(uint16_t pid)
         usb_cdc_acm_open_close(1200, ROBERT_BOSCH_USB_VID, pid);
         wait_for_dfu_mode_entry(app_address);
     }
-    else if (app_address == APP20_EXAMPLE_ADDR)
-    {
-        printf("\n Example already running ! \n");
-        exit(EXIT_SUCCESS);
-    }
     else if (app_address == APP30_MTP_FW_ADDR && pid == BST_APP30_CDC_USB_PID)
     {
         usb_cdc_acm_open_close(2400, ROBERT_BOSCH_USB_VID, BST_APP30_CDC_USB_PID);
@@ -275,6 +310,11 @@ static void switch_mode(uint16_t pid)
     else if (app_address == APP31_MTP_FW_ADDR && pid == BST_APP31_CDC_USB_PID)
     {
         usb_cdc_acm_open_close(2400, ROBERT_BOSCH_USB_VID, BST_APP31_CDC_USB_PID);
+        exit(EXIT_SUCCESS);
+    }
+    else if (app_address == HEAR3X_MTP_FW_ADDR && pid == BST_HEAR3X_CDC_USB_PID)
+    {
+        usb_cdc_acm_open_close(2400, ROBERT_BOSCH_USB_VID, BST_HEAR3X_CDC_USB_PID);
         exit(EXIT_SUCCESS);
     }
     else
@@ -298,12 +338,12 @@ static int usb_connected(char *port_name, uint16_t vid, uint16_t pid)
 
     /* List all connected USB devices */
     hDevInfo = SetupDiGetClassDevs(NULL, TEXT("USB"), NULL, DIGCF_PRESENT | DIGCF_ALLCLASSES);
-    for (index = 0;; index++)
+    for (index = 0; index < 255; index++)
     {
         DeviceInfoData.cbSize = sizeof(DeviceInfoData);
         if (!SetupDiEnumDeviceInfo(hDevInfo, index, &DeviceInfoData))
         {
-            return 0;     /* no match */
+            return 0; /* no match */
         }
 
         SetupDiGetDeviceRegistryProperty(hDevInfo, &DeviceInfoData, SPDRP_HARDWAREID, NULL, (BYTE*)HardwareID,
@@ -391,12 +431,12 @@ static void usb_cdc_acm_open_close(uint32_t baud_rate, uint16_t vid, uint16_t pi
     sprintf(usb_id, "VID_%04X&PID_%04X", vid, pid);
 
     hDevInfo = SetupDiGetClassDevs(NULL, TEXT("USB"), NULL, DIGCF_PRESENT | DIGCF_ALLCLASSES);
-    for (index = 0;; index++)
+    for (index = 0; index < 255; index++)
     {
         DeviceInfoData.cbSize = sizeof(DeviceInfoData);
         if (!SetupDiEnumDeviceInfo(hDevInfo, index, &DeviceInfoData))
         {
-            return;     /* no match */
+            return; /* no match */
         }
 
         SetupDiGetDeviceRegistryProperty(hDevInfo, &DeviceInfoData, SPDRP_HARDWAREID, NULL, (BYTE*)HardwareID,
@@ -439,31 +479,104 @@ static void usb_cdc_acm_open_close(uint32_t baud_rate, uint16_t vid, uint16_t pi
 #endif
 
 #ifdef PLATFORM_LINUX
-static int usb_connected(char *port_name, uint16_t vid, uint16_t pid)
+static void list_devices()
 {
-    (void)port_name;
-    libusb_init(NULL);
-    libusb_device **list;
+    libusb_device **dev_list = NULL;
+    libusb_device_handle *handle = NULL;
     struct libusb_device_descriptor desc;
+    int8_t dev_count = 0;
+    int8_t index;
 
-    int cnt = libusb_get_device_list(NULL, &list);
-
-    for (int i = 0; i < cnt; i++)
+    /* Initialize libusb */
+    libusb_init(NULL);
+    /* Get the list of USB devices */
+    dev_count = libusb_get_device_list(NULL, &dev_list);
+    if (dev_count > 0)
     {
-        libusb_device *device = list[i];
-        libusb_get_device_descriptor(device, &desc);
+        printf("\nUSB devices found:");
+    }
 
-        if (desc.idVendor == vid && desc.idProduct == pid)
+    for (index = 0; index < dev_count; index++)
+    {
+        device = dev_list[index];
+        if (libusb_get_device_descriptor(device, &desc) == 0)
         {
-            coines_delay_msec(2000);
+            if (libusb_open(device, &handle) == 0)
+            {
+                unsigned char serial_number[256];
+                if (libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, serial_number,
+                                                       sizeof(serial_number)) > 0)
+                {
+                    printf("\nDevice %d: %04X:%04X  Serial number: %s",
+                           index,
+                           desc.idVendor,
+                           desc.idProduct,
+                           serial_number);
+                }
 
-            return 1;
+                libusb_close(handle);
+            }
         }
     }
 
-    libusb_free_device_list(list, 1);
+    printf("\n");
+    libusb_free_device_list(dev_list, 1);
+}
+static int usb_connected(char *port_name, uint16_t vid, uint16_t pid)
+{
+    libusb_device **dev_list = NULL;
+    libusb_device_handle *handle = NULL;
+    struct libusb_device_descriptor desc;
+    int8_t dev_count = 0;
+    int8_t index;
+    int8_t ret = 0;
+    int8_t success = 1;
 
-    return 0;
+    /* Initialize libusb */
+    libusb_init(NULL);
+    /* Get the list of USB devices */
+    dev_count = libusb_get_device_list(NULL, &dev_list);
+
+    /* Iterate through the list to find the device */
+    for (index = 0; index < dev_count; index++)
+    {
+        device = dev_list[index];
+        if (libusb_get_device_descriptor(device, &desc) == 0)
+        {
+            if (desc.idVendor == vid && desc.idProduct == pid)
+            {
+                /* Open the device */
+                if (libusb_open(device, &handle) == 0)
+                {
+                    /* Check if port_name is NULL or matches the device's serial number */
+                    if (port_name == NULL || strcmp(port_name, "") == 0)
+                    {
+                        ret = success;
+                        break;
+                    }
+                    else
+                    {
+                        unsigned char serial_number[256];
+                        if (libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, serial_number,
+                                                               sizeof(serial_number)) > 0)
+                        {
+                            if (strcmp(port_name, (char *)serial_number) == 0)
+                            {
+                                ret = success;
+                                break;
+                            }
+                        }
+                    }
+
+                    libusb_close(handle);
+                }
+            }
+        }
+    }
+
+    libusb_free_device_list(dev_list, 1);
+
+    return ret;
 
 }
 
@@ -472,23 +585,23 @@ static void usb_cdc_acm_open_close(uint32_t baud_rate, uint16_t vid, uint16_t pi
 #define DTR  (1 << 0)
 #define RTS  (1 << 1)
 
-    struct libusb_device_handle *dev = NULL;
+    struct libusb_device_handle *handle = NULL;
     libusb_init(NULL);
-    dev = libusb_open_device_with_vid_pid(NULL, vid, pid);
+    libusb_open(device, &handle);
 
-    if (dev == NULL)
+    if (handle == NULL)
     {
         return;
     }
 
     for (int i = 0; i < 2; i++)
     {
-        if (libusb_kernel_driver_active(dev, i))
+        if (libusb_kernel_driver_active(handle, i))
         {
-            libusb_detach_kernel_driver(dev, i);
+            libusb_detach_kernel_driver(handle, i);
         }
 
-        libusb_claim_interface(dev, i);
+        libusb_claim_interface(handle, i);
     }
 
     /* 1200 8N1 , 1200 = 0x000004B0*/
@@ -496,15 +609,15 @@ static void usb_cdc_acm_open_close(uint32_t baud_rate, uint16_t vid, uint16_t pi
 
     memcpy(data, &baud_rate, 4);
 
-    libusb_control_transfer(dev, 0x21, 0x22, DTR | RTS, 0, NULL, 0, 0);
-    libusb_control_transfer(dev, 0x21, 0x20, 0, 0, data, sizeof(data), 0);
-    libusb_control_transfer(dev, 0x21, 0x22, 0x00, 0, NULL, 0, 0);
+    libusb_control_transfer(handle, 0x21, 0x22, DTR | RTS, 0, NULL, 0, 0);
+    libusb_control_transfer(handle, 0x21, 0x20, 0, 0, data, sizeof(data), 0);
+    libusb_control_transfer(handle, 0x21, 0x22, 0x00, 0, NULL, 0, 0);
 
     coines_delay_msec(1000);
 
-    libusb_control_transfer(dev, 0x21, 0x22, DTR | RTS, 0, NULL, 0, 0);
-    libusb_control_transfer(dev, 0x21, 0x20, 0, 0, data, sizeof(data), 0);
-    libusb_control_transfer(dev, 0x21, 0x22, 0x00, 0, NULL, 0, 0);
+    libusb_control_transfer(handle, 0x21, 0x22, DTR | RTS, 0, NULL, 0, 0);
+    libusb_control_transfer(handle, 0x21, 0x20, 0, 0, data, sizeof(data), 0);
+    libusb_control_transfer(handle, 0x21, 0x22, 0x00, 0, NULL, 0, 0);
 
     coines_delay_msec(1000);
 }

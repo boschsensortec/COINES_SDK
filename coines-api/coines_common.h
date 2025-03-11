@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -68,6 +68,24 @@ typedef struct
  * @return Error string for the given error code
  */
 const char *get_coines_error_str(int16_t error_code);
+
+/*!
+ * @brief This API is used to swap the endianness of the 16-bit data
+ *
+ * @param[out]  dest_arr     : Destination array
+ * 
+ * @param[in]  src_arr     : Source array
+ * 
+ * @param[in]  count     : Number of elements in the array
+ */
+void swap_endianness(uint16_t* dest_arr, uint16_t* src_arr, uint16_t count);
+
+/*!
+ *  @brief This API is used to check if the system is little-endian or big-endian
+ *
+ *  @return true if the system is little-endian, false otherwise
+ */
+bool is_system_little_endian();
 
 #ifdef __cplusplus
 }

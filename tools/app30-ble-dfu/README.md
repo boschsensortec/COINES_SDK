@@ -27,7 +27,7 @@ $ pip install -r requirements.txt
 C:\Tools> python app30-ble-dfu.py -l
 
 Application Board 3.0 BLE DFU tool
-Bosch Sensortec GmbH (C) 2024
+Bosch Sensortec GmbH (C) 2025
 
 Scanning for devices...
 APP3.0 Board (DFU)        D7:A3:CE:8E:36:14      -56 dB
@@ -41,7 +41,7 @@ Unknown                   EA:23:43:92:06:15      -57 dB
 ```
 C:\Tools> python app30-ble-dfu.py -d D7:A3:CE:8E:36:14 -f nrf52_ble_basic.bin
 Application Board 3.0 BLE DFU tool
-Bosch Sensortec GmbH (C) 2024
+Bosch Sensortec GmbH (C) 2025
 
 Connected to D7:A3:CE:8E:36:14
 nRF5 BLE DFU service found - v0.8
@@ -56,7 +56,7 @@ DFU Success !
 ```
 C:\Tools> python app30-ble-dfu.py --help
 Application Board 3.0 BLE DFU tool
-Bosch Sensortec GmbH (C) 2024
+Bosch Sensortec GmbH (C) 2025
 
 usage: app30-ble-dfu.py [-h] [-l] [-d DEVICE_MAC_ADDR] [-f FIRMWARE_BIN_FILE]
 

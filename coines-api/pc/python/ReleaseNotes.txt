@@ -1,3 +1,34 @@
+COINESPY v1.0.4 - (19-09-2024)
+
+Updates
+* Added the following API wrappers:
+    - get_millis(): Get the current time in milliseconds
+    - get_micro_sec(): Get the current time in microseconds
+    - write_intf(...): Write data to the communication interface
+    - read_intf(...): Read data from the communication interface
+    - shuttle_eeprom_write(...): Write data to the shuttle EEPROM
+    - shuttle_eeprom_read(...): Read data from the shuttle EEPROM
+    - read_16bit_i2c(...): Reads 16 bits from I2C bus
+    - write_16bit_i2c(...): Writes 16 bits to I2C bus
+* Supports streaming data at 1600HZ without dataloss.
+* Updated the following APIs:
+    - read_16bit_spi(...): Reads 16 bits from SPI bus
+    - write_16bit_spi(...): Writes 16 bits to SPI bus
+
+_______________________________________________________________
+
+COINESPY v1.0.3 - (17-07-2024)
+
+Updates
+* Added DMA streaming support.
+* Added external flash logging support.
+* Supports streaming data at 800HZ without dataloss.
+
+Limitation
+* Streaming data from multiple sensor may result in dataloss.
+
+_______________________________________________________________
+
 COINESPY v1.0.2 - (19-03-2024)
 
 Updates

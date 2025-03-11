@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -40,7 +40,7 @@
 
 /*! Macros to define communication interfaces */
 
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
 
 /*! Comm interface - I2C */
 #define NICLA_I2C_INTF              UINT8_C(1)
@@ -84,7 +84,7 @@ static void nicla_i2c0_event_handler(nrfx_twim_evt_t const *p_event, void *p_con
 
 #endif
 
-#if defined(MCU_APP31)
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
 /* I2C communication device bus */
 enum coines_i2c_bus i2c_dev_bus = COINES_I2C_BUS_1;
 #elif defined(MCU_NICLA)
@@ -98,7 +98,7 @@ enum coines_i2c_bus i2c_dev_bus = COINES_I2C_BUS_0;
  */
 int8_t common_i2c_init(void)
 {
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
     int8_t rslt = NRFX_ERROR_NULL;
     nrfx_twim_config_t i2c_config = NRFX_TWIM_DEFAULT_CONFIG;
 
@@ -147,7 +147,7 @@ int8_t common_i2c_init(void)
  */
 int8_t common_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t length, uint8_t i2c_dev_address)
 {
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
     nrfx_err_t error_val = NRFX_SUCCESS;
 
     uint8_t buffer[length + 1];
@@ -190,7 +190,7 @@ int8_t common_i2c_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t leng
  */
 int8_t common_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, uint8_t i2c_dev_address)
 {
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
     nrfx_err_t error_val = NRFX_SUCCESS;
 
     nrfx_twim_xfer_desc_t read_desc = NRFX_TWIM_XFER_DESC_TXRX(i2c_dev_address, &reg_addr, 1, reg_data, length);
@@ -226,7 +226,7 @@ int8_t common_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, uin
  */
 void common_delay_ms(uint32_t period)
 {
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
     nrf_delay_ms(period);
 #else
     coines_delay_msec(period);
@@ -238,7 +238,7 @@ void common_delay_ms(uint32_t period)
  */
 int8_t common_pmic_cd_init(void)
 {
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
     nrf_gpio_cfg_output(PMIC_CD);
     nrf_gpio_pin_write(PMIC_CD, 1);
     return NRFX_SUCCESS;
@@ -255,7 +255,7 @@ int8_t common_pmic_cd_set(uint8_t pin_state)
     if(pin_state>1)
         pin_state = 1;
 
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
     int8_t rslt = NRFX_SUCCESS;
     nrf_gpio_pin_write(PMIC_CD, pin_state);
     return rslt;

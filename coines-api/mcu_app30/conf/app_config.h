@@ -1,7 +1,7 @@
 
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -94,46 +94,46 @@
 #define NRFX_TWIM_ENABLED 1
 #endif
 // <q> NRFX_TWIM0_ENABLED  - Enable TWIM0 instance
- 
+
 
 #ifndef NRFX_TWIM0_ENABLED
 #define NRFX_TWIM0_ENABLED 1
 #endif
 
 // <q> NRFX_TWIM1_ENABLED  - Enable TWIM1 instance
- 
+
 
 #ifndef NRFX_TWIM1_ENABLED
 #define NRFX_TWIM1_ENABLED 1
 #endif
 
 // <o> NRFX_TWIM_DEFAULT_CONFIG_FREQUENCY  - Frequency
- 
-// <26738688=> 100k 
-// <67108864=> 250k 
-// <104857600=> 400k 
+
+// <26738688=> 100k
+// <67108864=> 250k
+// <104857600=> 400k
 
 #ifndef NRFX_TWIM_DEFAULT_CONFIG_FREQUENCY
 #define NRFX_TWIM_DEFAULT_CONFIG_FREQUENCY 26738688
 #endif
 
 // <q> NRFX_TWIM_DEFAULT_CONFIG_HOLD_BUS_UNINIT  - Enables bus holding after uninit
- 
+
 
 #ifndef NRFX_TWIM_DEFAULT_CONFIG_HOLD_BUS_UNINIT
 #define NRFX_TWIM_DEFAULT_CONFIG_HOLD_BUS_UNINIT 1
 #endif
 
 // <o> NRFX_TWIM_DEFAULT_CONFIG_IRQ_PRIORITY  - Interrupt priority
- 
-// <0=> 0 (highest) 
-// <1=> 1 
-// <2=> 2 
-// <3=> 3 
-// <4=> 4 
-// <5=> 5 
-// <6=> 6 
-// <7=> 7 
+
+// <0=> 0 (highest)
+// <1=> 1
+// <2=> 2
+// <3=> 3
+// <4=> 4
+// <5=> 5
+// <6=> 6
+// <7=> 7
 
 #ifndef NRFX_TWIM_DEFAULT_CONFIG_IRQ_PRIORITY
 #define NRFX_TWIM_DEFAULT_CONFIG_IRQ_PRIORITY 6

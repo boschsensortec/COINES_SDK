@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
-
+Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
 BSD-3-Clause
 
 Redistribution and use in source and binary forms, with or without
@@ -39,7 +38,7 @@ from coinespy import ErrorCodes
 
 # Please change the name and address with BLE name and address of the App board under test
 BLE_NAME = "APP Board 3.1(C3-F4)"
-BLE_ADDR = "c1:c5:2f:20:c3:f4"
+BLE_ADDR = "eb:a3:d0:d9:f7:24"
 
 COM_INTF = cpy.CommInterface.BLE
 

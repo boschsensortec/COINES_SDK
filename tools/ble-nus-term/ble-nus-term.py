@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 
-Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
-
+Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
 BSD-3-Clause
 
 Redistribution and use in source and binary forms, with or without
@@ -142,7 +141,7 @@ async def run(address, loop, scan):
 
 if __name__ == "__main__":
     print("Application Board 3.0 BLE NUS Terminal")
-    print("Bosch Sensortec GmbH (C) 2023")
+    print("Bosch Sensortec GmbH (C) 2025")
     cmdline_parser = argparse.ArgumentParser()
     cmdline_parser.add_argument(
         '-l', '--list', dest='scan', help='Scan for BLE devices', action='store_true')

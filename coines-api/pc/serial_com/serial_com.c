@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -67,8 +67,8 @@
 
 #define BST_APP31_CDC_USB_PID     (0xAB38)
 #define BST_APP30_CDC_USB_PID     (0xAB3C)
-#define BST_APP20_CDC_USB_PID     (0xAB2C)
 #define ARDUINO_NICLA_USB_PID     (0x0060)
+#define BST_HEAR3X_CDC_USB_PID    (0x4B3C)
 
 /*! USB COINES_SDK Development desktop device vendor ID*/
 #define COINES_DEVICE_DD_VENDOR   (0x152A)
@@ -119,17 +119,17 @@ int8_t scom_open(void)
 
     if (com_rslt != SCOM_OK)
     {
-        com_rslt = scom_open_id(DEFAULT_BAUD_RATE, ROBERT_BOSCH_USB_VID, BST_APP20_CDC_USB_PID, NULL);
-    }
-
-    if (com_rslt != SCOM_OK)
-    {
         com_rslt = scom_open_id(DEFAULT_BAUD_RATE, ARDUINO_USB_VID, ARDUINO_NICLA_USB_PID, NULL);
     }
 
     if (com_rslt != SCOM_OK)
     {
         com_rslt = scom_open_id(DEFAULT_BAUD_RATE, ROBERT_BOSCH_USB_VID, BST_APP31_CDC_USB_PID, NULL);
+    }
+
+    if (com_rslt != SCOM_OK)
+    {
+        com_rslt = scom_open_id(DEFAULT_BAUD_RATE, ROBERT_BOSCH_USB_VID, BST_HEAR3X_CDC_USB_PID, NULL);
     }
 
     if (com_rslt != SCOM_OK)
