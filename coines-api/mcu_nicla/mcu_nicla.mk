@@ -1,3 +1,10 @@
+nRF5_SDK_DIR = ../../thirdparty/nRF5_SDK
+THIRD_PARTY_DIR=../../thirdparty
+LIB_DIR=../../libraries
+COMMON=../common
+COINES_API_DIR=.
+
+
 CROSS_COMPILE = arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 AR = $(CROSS_COMPILE)ar

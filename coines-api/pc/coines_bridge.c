@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 #include <sys/time.h>
 #include <math.h>
 
@@ -81,9 +82,20 @@
 /*********************************************************************/
 /* static variables */
 /*********************************************************************/
+/*! Buffer to hold the response data */
 static uint8_t *resp_buffer;
+
+/*! Command packet buffer initialized to zero */
 static uint8_t cmd_packet[COINES_BUFFER_SIZE] = { 0 };
+
+/*! Size of the command packet */
 static uint16_t cmd_packet_size;
+
+/*! Buffer to hold the formatted date-time string */
+static char datetime_str[64];
+
+/*! Length of the formatted date-time string */
+static uint16_t datetime_str_len;
 
 /*! Variable to hold sensor count */
 static uint8_t coines_sensor_id_count = 0;
@@ -111,10 +123,11 @@ static int16_t coines_disconnect_usb(void);
 static int16_t coines_connect_ble(struct ble_peripheral_info *ble_config);
 static int16_t coines_disconnect_ble(void);
 static int16_t coines_send_packet(uint8_t command, uint8_t *payload, uint16_t length);
+static int16_t read_data(uint8_t *resp_buffer, uint16_t packet_length);
 
 /*! COINES_SDK config streaming mode */
-static int16_t config_streaming_mode(enum coines_streaming_mode stream_mode);
-
+static int16_t config_poll_stream_timing(void);
+static int16_t dma_stream_config(void);
 /*********************************************************************/
 /* functions */
 /*********************************************************************/
@@ -142,13 +155,13 @@ static int16_t map_ble_error_codes(int16_t err_code)
             coines_ret = COINES_E_BLE_PERIPHERAL_NOT_FOUND;
             break;
         case BLE_COM_E_INVALID_COM_CONFIG:
-            coines_ret = COINES_E_INVALID_BLE_CONFIG;
+            coines_ret = COINES_E_BLE_INVALID_CONFIG;
             break;
         case BLE_COM_E_ADAPTER_BLUETOOTH_NOT_ENABLED:
-            coines_ret = COINES_E_ADAPTER_BLUETOOTH_NOT_ENABLED;
+            coines_ret = COINES_E_BLE_ADAPTER_BLUETOOTH_NOT_ENABLED;
             break;
         case BLE_COM_E_APP_BOARD_NOT_FOUND:
-            coines_ret = COINES_E_APP_BOARD_BLE_NOT_FOUND;
+            coines_ret = COINES_E_BLE_APP_BOARD_NOT_FOUND;
             break;
         default:
             coines_ret = COINES_E_BLE_COMM_FAILED;
@@ -242,51 +255,65 @@ static int16_t coines_send_packet(uint8_t command, uint8_t *payload, uint16_t le
  * @brief This API is used read and parse the received response
  *
  */
-static int16_t coines_receive_resp(uint8_t command, uint16_t *resp_length)
+static int16_t read_data(uint8_t *read_buffer, uint16_t packet_length)
 {
-    int16_t ret = COINES_SUCCESS;
+    uint32_t start_time;
+    uint32_t current_time;
     uint16_t bytes_available;
-    uint32_t packet_idx;
-    uint16_t packet_length = 0;
-    uint16_t initial_read_len = 3;
+    int16_t packet_idx = 0;
 
-    packet_idx = 0;
+    start_time = coines_get_millis();
     do
     {
-        bytes_available = coines_read_intf(comm_intf, &resp_buffer[packet_idx], initial_read_len);
+        bytes_available = coines_read_intf(comm_intf, &read_buffer[packet_idx], packet_length);
         if (com_read_status == COM_OK)
         {
             if (bytes_available)
             {
-                packet_idx += bytes_available;
+                packet_idx += (int16_t)bytes_available;
             }
         }
         else
         {
             return COINES_E_COMM_IO_ERROR;
         }
-    } while (packet_idx < 3);
+        current_time = coines_get_millis();
+        if ((current_time - start_time) > READ_TIMEOUT_MS)
+        {
+            return COINES_E_READ_TIMEOUT;
+        }
+    } while (packet_idx < packet_length);
 
+    return packet_idx;
+}
+/*!
+ * @brief This API is used read and parse the received response
+ *
+ */
+static int16_t coines_receive_resp(uint8_t command, uint16_t *resp_length)
+{
+    int16_t ret = COINES_SUCCESS;
+    int16_t packet_idx;
+    uint16_t packet_length = 0;
+    uint16_t initial_read_len = 3;
+
+    packet_idx = read_data(&resp_buffer[0], initial_read_len);
+    if (packet_idx < 0)
+    {
+        /* Error occured */
+        return packet_idx;
+    }
+    
     memcpy(&packet_length, &resp_buffer[COINES_PROTO_LENGTH_POS], 2);
 
     if (packet_length)
     {
-        do
+        packet_idx = read_data(&resp_buffer[packet_idx], (uint16_t)(packet_length - packet_idx));
+        if (packet_idx < 0) 
         {
-            bytes_available =
-                coines_read_intf(comm_intf, &resp_buffer[packet_idx], (uint16_t)(packet_length - packet_idx));
-            if (com_read_status == COM_OK)
-            {
-                if (bytes_available)
-                {
-                    packet_idx += bytes_available;
-                }
-            }
-            else
-            {
-                return COINES_E_COMM_IO_ERROR;
-            }
-        } while (packet_idx < packet_length);
+            /* Error occured */
+            return packet_idx;
+        }
 
         if (resp_buffer[COINES_PROTO_HEADER_POS] == COINES_RESP_OK_HEADER)
         {
@@ -319,7 +346,7 @@ static int16_t coines_receive_resp(uint8_t command, uint16_t *resp_length)
 /*!
  * @brief Calls BLE scan function
  */
-int16_t coines_scan_ble_devices(struct ble_peripheral_info *ble_info, uint8_t *peripheral_count, size_t scan_timeout_ms)
+int16_t coines_scan_ble_devices(struct ble_peripheral_info *ble_info, uint8_t *peripheral_count, uint32_t scan_timeout_ms)
 {
     int8_t err_code = ble_scan(ble_info, peripheral_count, scan_timeout_ms);
     int16_t coines_ret = map_ble_error_codes(err_code);
@@ -639,6 +666,22 @@ int8_t coines_write_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint8_t reg_a
 }
 
 /*!
+ *  @brief This API is used to write 16-bit register data on the I2C device.
+ *
+ */
+int8_t coines_write_16bit_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_i2c_transfer_bits i2c_transfer_bits)
+{
+    (void)bus;
+    (void)dev_addr;
+    (void)reg_addr;
+    (void)reg_data;
+    (void)count;
+    (void)i2c_transfer_bits;
+
+    return (int8_t)COINES_E_FAILURE;
+}
+
+/*!
  *  @brief This API is used to read the data in I2C communication.
  *
  */
@@ -666,16 +709,17 @@ int8_t coines_read_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint8_t reg_ad
 }
 
 /*!
- *  @brief This API is used to write the data in SPI communication.
+ *  @brief This API is used to read 16-bit register data from the I2C device.
  *
  */
-int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_addr, void *reg_data, uint16_t count)
+int8_t coines_read_16bit_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_i2c_transfer_bits i2c_transfer_bits)
 {
     (void)bus;
-    (void)cs;
+    (void)dev_addr;
     (void)reg_addr;
     (void)reg_data;
     (void)count;
+    (void)i2c_transfer_bits;
 
     return (int8_t)COINES_E_FAILURE;
 }
@@ -684,9 +728,25 @@ int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_
  *  @brief This API is used to write the data in SPI communication.
  *
  */
-int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits)
 {
-    uint8_t payload[5] = { bus, dev_addr, reg_addr, 0, 0 };
+    (void)bus;
+    (void)cs_pin;
+    (void)reg_addr;
+    (void)reg_data;
+    (void)count;
+    (void)spi_transfer_bits;
+
+    return (int8_t)COINES_E_FAILURE;
+}
+
+/*!
+ *  @brief This API is used to write the data in SPI communication.
+ *
+ */
+int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+{
+    uint8_t payload[5] = { bus, cs_pin, reg_addr, 0, 0 };
     int16_t ret;
     uint16_t resp_length = 0;
 
@@ -705,13 +765,14 @@ int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_a
  *  @brief This API is used to read the data in SPI communication.
  *
  */
-int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_addr, void *reg_data, uint16_t count)
+int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits)
 {
     (void)bus;
-    (void)cs;
+    (void)cs_pin;
     (void)reg_addr;
     (void)reg_data;
     (void)count;
+    (void)spi_transfer_bits;
 
     return (int8_t)COINES_E_FAILURE;
 }
@@ -720,9 +781,9 @@ int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_a
  *  @brief This API is used to read the data in SPI communication.
  *
  */
-int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
 {
-    uint8_t payload[5] = { bus, dev_addr, reg_addr, 0, 0 };
+    uint8_t payload[5] = { bus, cs_pin, reg_addr, 0, 0 };
     int16_t ret;
     uint16_t resp_length = 0;
 
@@ -848,7 +909,7 @@ static int16_t coines_connect_usb(struct coines_serial_com_config *scom_config)
         if (strncmp(com_port_name, "/dev/", 5) != 0)
         #endif
         {
-            return COINES_E_INVALID_SCOM_CONFIG;
+            return COINES_E_SCOM_INVALID_CONFIG;
         }
 
         if (new_rx_buffer_size > COINES_BUFFER_SIZE)
@@ -995,9 +1056,9 @@ int16_t coines_config_streaming(uint8_t sensor_id,
  * @brief This API is used to configure polling streaming sample time.
  *
  */
-static int16_t config_streaming_mode(enum coines_streaming_mode stream_mode)
+static int16_t config_poll_stream_timing()
 {
-    int16_t ret = COINES_SUCCESS;
+    int16_t ret;
     double sampling_time[2] = { 0, 0 };
     double remaining = 0;
     uint16_t resp_length = 0;
@@ -1006,97 +1067,159 @@ static int16_t config_streaming_mode(enum coines_streaming_mode stream_mode)
     enum coines_sampling_unit gcd_sampling_unit;
     uint32_t i;
 
-    if (stream_mode == COINES_STREAMING_MODE_POLLING)
+    /*check if sensor id count is greater than 1*/
+    if (coines_sensor_id_count > 1)
     {
-
-        /*check if sensor id count is greater than 1*/
-        if (coines_sensor_id_count > 1)
+        for (i = 0; i < coines_sensor_id_count; i++)
         {
-            for (i = 0; i < coines_sensor_id_count; i++)
-            {
-                sampling_time[i] = (double)coines_streaming_cfg_buf[i].stream_config.sampling_time;
-                sampling_unit[i] = coines_streaming_cfg_buf[i].stream_config.sampling_units;
-                sampling_time[i] =
-                    (sampling_unit[i] ==
-                     COINES_SAMPLING_TIME_IN_MICRO_SEC) ? (sampling_time[i] / 1000.00) : sampling_time[i];
-            }
+            sampling_time[i] = (double)coines_streaming_cfg_buf[i].stream_config.sampling_time;
+            sampling_unit[i] = coines_streaming_cfg_buf[i].stream_config.sampling_units;
+            sampling_time[i] =
+                (sampling_unit[i] ==
+                    COINES_SAMPLING_TIME_IN_MICRO_SEC) ? (sampling_time[i] / 1000.00) : sampling_time[i];
+        }
 
-            /* Calculate GCD */
-            while (sampling_time[1] != 0)
-            {
-                remaining = (double)fmod(sampling_time[0], sampling_time[1]);
-                sampling_time[0] = sampling_time[1];
-                sampling_time[1] = remaining;
-            }
+        /* Calculate GCD */
+        while (sampling_time[1] != 0)
+        {
+            remaining = (double)fmod(sampling_time[0], sampling_time[1]);
+            sampling_time[0] = sampling_time[1];
+            sampling_time[1] = remaining;
+        }
 
-            /* If decimal point is present, convert to microsecond */
-            if ((sampling_time[0] - (int32_t)sampling_time[0]) != 0)
-            {
-                /* Need to convert to microsecond */
-                gcd_sampling_time = (uint16_t)(sampling_time[0] * 1000);
-                gcd_sampling_unit = COINES_SAMPLING_TIME_IN_MICRO_SEC;
-            }
-            else
-            {
-                gcd_sampling_time = (uint16_t)sampling_time[0];
-                gcd_sampling_unit = COINES_SAMPLING_TIME_IN_MILLI_SEC;
-            }
+        /* If decimal point is present, convert to microsecond */
+        if ((sampling_time[0] - (int32_t)sampling_time[0]) != 0)
+        {
+            /* Need to convert to microsecond */
+            gcd_sampling_time = (uint16_t)(sampling_time[0] * 1000);
+            gcd_sampling_unit = COINES_SAMPLING_TIME_IN_MICRO_SEC;
         }
         else
         {
-            gcd_sampling_time = coines_streaming_cfg_buf[coines_sensor_id_count - 1].stream_config.sampling_time;
-            gcd_sampling_unit = coines_streaming_cfg_buf[coines_sensor_id_count - 1].stream_config.sampling_units;
+            gcd_sampling_time = (uint16_t)sampling_time[0];
+            gcd_sampling_unit = COINES_SAMPLING_TIME_IN_MILLI_SEC;
+        }
+    }
+    else
+    {
+        gcd_sampling_time = coines_streaming_cfg_buf[coines_sensor_id_count - 1].stream_config.sampling_time;
+        gcd_sampling_unit = coines_streaming_cfg_buf[coines_sensor_id_count - 1].stream_config.sampling_units;
+    }
+
+    /*general streaming settings*/
+    uint8_t payload[COINES_POLL_STREAM_COMMON_PAYLOAD_LEN];
+    payload[0] = coines_sensor_id_count;
+    payload[1] = gcd_sampling_time >> 8;
+    payload[2] = gcd_sampling_time & 0xFF;
+    payload[3] = gcd_sampling_unit;
+
+    ret = coines_send_packet(COINES_CMD_ID_POLL_STREAM_COMMON, payload, COINES_POLL_STREAM_COMMON_PAYLOAD_LEN);
+    if (ret == COINES_SUCCESS)
+    {
+        ret = coines_receive_resp(COINES_CMD_ID_POLL_STREAM_COMMON, &resp_length);
+    }
+    else
+    {
+        return ret;
+    }
+   
+    return ret;
+}
+
+static int16_t dma_stream_config(void)
+{
+    int16_t ret = COINES_SUCCESS;
+    uint16_t no_of_bytes_read = 0;
+    uint8_t write_index = 0;
+    uint16_t payload_len = 0;
+    uint16_t resp_length;
+    uint8_t payload[COINES_STREAM_CONFIG_BUFF_SIZE];
+
+    for (uint8_t i = 0; i < coines_sensor_id_count; i++)
+    {
+        memset(&payload[0], 0x0, sizeof(payload));
+        payload[write_index++] = coines_streaming_cfg_buf[i].sensor_id;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.int_timestamp;
+        payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.intf;
+        if (coines_streaming_cfg_buf[i].stream_config.intf == COINES_SENSOR_INTF_I2C)
+        {
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.i2c_bus;
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dev_addr;
+        }
+        else /* COINES_SENSOR_INTF_SPI */
+        {
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.spi_bus;
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.cs_pin;
         }
 
-        /*general streaming settings*/
-        uint8_t payload[COINES_POLL_STREAM_COMMON_PAYLOAD_LEN];
-        payload[0] = coines_sensor_id_count;
-        payload[1] = gcd_sampling_time >> 8;
-        payload[2] = gcd_sampling_time & 0xFF;
-        payload[3] = gcd_sampling_unit;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.int_pin;
 
-        ret = coines_send_packet(COINES_CMD_ID_POLL_STREAM_COMMON, payload, COINES_POLL_STREAM_COMMON_PAYLOAD_LEN);
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.ctlr_addr >> 8;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.ctlr_addr & 0xFF;
+
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.startaddr_cmd >> 8;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.startaddr_cmd & 0xFF;
+
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.read_addr >> 8;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.read_addr & 0xFF;
+
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dma_config.read_len;
+
+            
+        no_of_bytes_read += coines_streaming_cfg_buf[i].stream_config.dma_config.read_len;
+        
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.spi_type;
+        
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.hw_pin_state;
+
+        no_of_bytes_read += 10; /* if extra bytes in resp packet, timestamp(6bytes) and packet no(4bytes) */
+        
+        coines_sensor_info.sensors_byte_count[i] = no_of_bytes_read;
+
+        payload_len = write_index;
+
+        ret = coines_send_packet(COINES_CMD_ID_DMA_INT_STREAM_CONFIG, &payload[0], payload_len);
         if (ret == COINES_SUCCESS)
         {
-            ret = coines_receive_resp(COINES_CMD_ID_POLL_STREAM_COMMON, &resp_length);
+            ret = coines_receive_resp(COINES_CMD_ID_DMA_INT_STREAM_CONFIG, &resp_length);
+            if (ret != COINES_SUCCESS)
+            {
+                return ret;
+            }
         }
         else
         {
             return ret;
         }
-    }
-    else
-    {
-        ret = COINES_SUCCESS;
-    }
 
+        write_index = 0;
+        payload_len = 0;
+        no_of_bytes_read = 0;
+    }
+    
+    coines_sensor_info.stream_mode = COINES_STREAMING_MODE_DMA_INTERRUPT;
     return ret;
+
 }
 
 /*!
- * @brief This API is used to send streaming setting and start/stop the streaming.
+ * @brief This API is used to configure polling streaming.
  *
  */
-int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint8_t start_stop)
+static int16_t poll_stream_config(void)
 {
-    int16_t ret = COINES_SUCCESS;
-    uint32_t i, j;
+    int16_t ret;
     uint16_t no_of_bytes_read = 0;
     uint8_t write_index = 0;
-    uint8_t payload_len = 0;
+    uint16_t payload_len = 0;
     uint16_t resp_length;
-    uint8_t stream_config_type;
-    uint8_t payload[COINES_STREAM_CONFIG_BUFF_SIZE] = { 0 };
+    uint8_t payload[COINES_STREAM_CONFIG_BUFF_SIZE];
 
-    /*check the if it is start request for polling streaming*/
-    if (start_stop)
+    ret = config_poll_stream_timing();
+
+    if (ret == COINES_SUCCESS)
     {
-        coines_sensor_info.no_of_sensors_enabled = coines_sensor_id_count;
-
-        ret = config_streaming_mode(stream_mode);
-
-        /* bridge streaming settings */
-        for (i = 0; i < coines_sensor_id_count; i++)
+        for (uint8_t i = 0; i < coines_sensor_id_count; i++)
         {
             memset(&payload[0], 0x0, sizeof(payload));
             payload[write_index++] = coines_streaming_cfg_buf[i].sensor_id;
@@ -1113,28 +1236,16 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint
                 payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.cs_pin;
             }
 
-            if (stream_mode == COINES_STREAMING_MODE_POLLING)
-            {
-                payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.sampling_time >> 8;
-                payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.sampling_time & 0xFF;
-                payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.sampling_units;
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.sampling_time >> 8;
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.sampling_time & 0xFF;
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.sampling_units;
 
-                no_of_bytes_read += 0; /* if extra bytes in resp packet */
-                stream_config_type = COINES_CMD_ID_POLL_STREAM_CONFIG;
-
-            }
-            else /* COINES_STREAMING_MODE_INTERRUPT */
-            {
-                payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.int_pin;
-
-                no_of_bytes_read += 10; /* if extra bytes in resp packet, timestamp(6bytes) and packet no(4bytes) */
-                stream_config_type = COINES_CMD_ID_INT_STREAM_CONFIG;
-            }
-
+            no_of_bytes_read += 0; /* if extra bytes in resp packet */
+            
             payload[write_index++] = coines_streaming_cfg_buf[i].data_blocks.no_of_blocks >> 8;
             payload[write_index++] = coines_streaming_cfg_buf[i].data_blocks.no_of_blocks & 0xFF;
 
-            for (j = 0; j < coines_streaming_cfg_buf[i].data_blocks.no_of_blocks; j++)
+            for (uint16_t j = 0; j < coines_streaming_cfg_buf[i].data_blocks.no_of_blocks; j++)
             {
                 payload[write_index++] = coines_streaming_cfg_buf[i].data_blocks.reg_start_addr[j];
                 payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].data_blocks.no_of_data_bytes[j];
@@ -1143,11 +1254,6 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint
 
             payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.spi_type;
             payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.clear_on_write;
-
-            if (stream_mode == COINES_STREAMING_MODE_INTERRUPT)
-            {
-                payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.hw_pin_state;
-            }
 
             if (coines_streaming_cfg_buf[i].stream_config.clear_on_write)
             {
@@ -1159,7 +1265,7 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint
 
             payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.intline_count;
 
-            for (j = 0; j < coines_streaming_cfg_buf[i].stream_config.intline_count; j++)
+            for (uint16_t j = 0; j < coines_streaming_cfg_buf[i].stream_config.intline_count; j++)
             {
                 payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.intline_info[j];
             }
@@ -1168,10 +1274,10 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint
 
             payload_len = write_index;
 
-            ret = coines_send_packet(stream_config_type, &payload[0], payload_len);
+            ret = coines_send_packet(COINES_CMD_ID_POLL_STREAM_CONFIG, &payload[0], payload_len);
             if (ret == COINES_SUCCESS)
             {
-                ret = coines_receive_resp(stream_config_type, &resp_length);
+                ret = coines_receive_resp(COINES_CMD_ID_POLL_STREAM_CONFIG, &resp_length);
                 if (ret != COINES_SUCCESS)
                 {
                     return ret;
@@ -1186,9 +1292,163 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint
             payload_len = 0;
             no_of_bytes_read = 0;
         }
+    }        
+    
+    return ret;
+}
 
-        payload[0] = 0xFF;
-        ret = coines_send_packet(COINES_CMD_ID_STREAM_START_STOP, &payload[0], 1);
+/*!
+ * @brief This API is used to configure interrupt streaming.
+ *
+ */
+static int16_t interrupt_stream_config(void)
+{
+    int16_t ret = COINES_SUCCESS;
+    uint16_t no_of_bytes_read = 0;
+    uint8_t write_index = 0;
+    uint16_t payload_len = 0;
+    uint16_t resp_length;
+    uint8_t payload[COINES_STREAM_CONFIG_BUFF_SIZE];
+
+    for (uint8_t i = 0; i < coines_sensor_id_count; i++)
+    {
+        memset(&payload[0], 0x0, sizeof(payload));
+        payload[write_index++] = coines_streaming_cfg_buf[i].sensor_id;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.int_timestamp;
+        payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.intf;
+        if (coines_streaming_cfg_buf[i].stream_config.intf == COINES_SENSOR_INTF_I2C)
+        {
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.i2c_bus;
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.dev_addr;
+        }
+        else /* COINES_SENSOR_INTF_SPI */
+        {
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.spi_bus;
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].stream_config.cs_pin;
+        }
+
+        
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.int_pin;
+
+        no_of_bytes_read += 10; /* if extra bytes in resp packet, timestamp(6bytes) and packet no(4bytes) */
+       
+        payload[write_index++] = coines_streaming_cfg_buf[i].data_blocks.no_of_blocks >> 8;
+        payload[write_index++] = coines_streaming_cfg_buf[i].data_blocks.no_of_blocks & 0xFF;
+
+        for (uint16_t j = 0; j < coines_streaming_cfg_buf[i].data_blocks.no_of_blocks; j++)
+        {
+            payload[write_index++] = coines_streaming_cfg_buf[i].data_blocks.reg_start_addr[j];
+            payload[write_index++] = (uint8_t)coines_streaming_cfg_buf[i].data_blocks.no_of_data_bytes[j];
+            no_of_bytes_read += coines_streaming_cfg_buf[i].data_blocks.no_of_data_bytes[j];
+        }
+
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.spi_type;
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.clear_on_write;
+
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.hw_pin_state;
+
+        if (coines_streaming_cfg_buf[i].stream_config.clear_on_write)
+        {
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.clear_on_write_config.dummy_byte;
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.clear_on_write_config.startaddress;
+            payload[write_index++] =
+                (uint8_t)coines_streaming_cfg_buf[i].stream_config.clear_on_write_config.num_bytes_to_clear;
+        }
+
+        payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.intline_count;
+
+        for (uint16_t j = 0; j < coines_streaming_cfg_buf[i].stream_config.intline_count; j++)
+        {
+            payload[write_index++] = coines_streaming_cfg_buf[i].stream_config.intline_info[j];
+        }
+
+        coines_sensor_info.sensors_byte_count[i] = no_of_bytes_read;
+
+        payload_len = write_index;
+
+        ret = coines_send_packet(COINES_CMD_ID_INT_STREAM_CONFIG, &payload[0], payload_len);
+        if (ret == COINES_SUCCESS)
+        {
+            ret = coines_receive_resp(COINES_CMD_ID_INT_STREAM_CONFIG, &resp_length);
+            if (ret != COINES_SUCCESS)
+            {
+                return ret;
+            }
+        }
+        else
+        {
+            return ret;
+        }
+
+        write_index = 0;
+        payload_len = 0;
+        no_of_bytes_read = 0;
+    }
+    return ret;
+}
+
+/*!
+ * @brief This API is used to send streaming setting and start/stop the streaming.
+ *
+ */
+int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint8_t start_stop)
+{
+    int16_t ret = COINES_SUCCESS;
+    uint32_t i;
+    uint16_t payload_len = 0;
+    uint16_t resp_length;
+    uint8_t payload[COINES_STREAM_CONFIG_BUFF_SIZE];
+ 
+    /*! Holds the current time as a time_t value */
+    time_t system_time; 
+
+    /*! Pointer to a tm structure holding the decomposed time */
+    struct tm *tm_local;
+
+    /*check the if it is start request for polling streaming*/
+    if (start_stop)
+    {
+        coines_sensor_info.no_of_sensors_enabled = coines_sensor_id_count;
+
+        if (stream_mode == COINES_STREAMING_MODE_DMA_INTERRUPT)
+        {
+            (void)dma_stream_config();
+        }
+        else if (stream_mode == COINES_STREAMING_MODE_POLLING)
+        {
+            (void)poll_stream_config();
+        }
+        else if(stream_mode == COINES_STREAMING_MODE_INTERRUPT)
+        {
+            (void)interrupt_stream_config();
+        }
+        
+        if(start_stop == COINES_USB_STREAMING_START)
+        {
+            // Enable USB streaming
+            payload[0] = 0xFF;
+            payload_len = 1;
+            ret = coines_send_packet(COINES_CMD_ID_STREAM_START_STOP, &payload[0], payload_len);
+        }
+        else if (start_stop == COINES_EXT_FLASH_STREAMING_START)
+        {
+            // Enable external flash logging 
+            payload[0] = 0xFE;
+            /*lint -e64*/
+            (void)time(&system_time);
+            tm_local = localtime(&system_time);
+            /*lint +e64*/
+            
+            // Format the current date and time as a string ("YYYY-MM-DD HH:MM:SS")
+            (void)strftime(datetime_str, sizeof(datetime_str), "StreamData_%Y-%m-%d_%H:%M:%S", tm_local);
+            datetime_str_len = (uint16_t)strlen(datetime_str) + 1; // 1 byte for null terminator
+            payload_len = datetime_str_len + 1; // 1 byte for the command
+
+            memcpy(&payload[1], datetime_str, datetime_str_len);
+            ret = coines_send_packet(COINES_CMD_ID_STREAM_START_STOP, &payload[0], payload_len);
+        }
+       
+        
         if (ret == COINES_SUCCESS)
         {
             ret = coines_receive_resp(COINES_CMD_ID_STREAM_START_STOP, &resp_length);
@@ -1212,7 +1472,7 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode stream_mode, uint
         {
             memset(&coines_streaming_cfg_buf[i], 0, sizeof(struct coines_streaming_settings));
         }
-
+       
         coines_sensor_id_count = 0;
     }
 

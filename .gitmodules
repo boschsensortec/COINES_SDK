@@ -1,0 +1,18 @@
+[submodule "examples/bma400"]
+	path = examples/bma400
+	url = https://github.com/boschsensortec/BMA400_SensorAPI.git
+[submodule "examples/bme68x"]
+	path = examples/bme68x
+	url = https://github.com/boschsensortec/BME68x_SensorAPI.git
+[submodule "examples/bmi270"]
+	path = examples/bmi270
+	url = https://github.com/boschsensortec/BMI270_SensorAPI.git
+[submodule "examples/bmm350"]
+	path = examples/bmm350
+	url = https://github.com/boschsensortec/BMM350_SensorAPI.git
+[submodule "examples/bmp5"]
+	path = examples/bmp5
+	url = https://github.com/boschsensortec/BMP5_SensorAPI.git
+[submodule "examples/bma530"]
+	path = examples/bma530
+	url = https://github.com/boschsensortec/BMA530_SensorAPI.git

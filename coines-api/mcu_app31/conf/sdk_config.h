@@ -5330,6 +5330,10 @@
 #define NRFX_PPI_CONFIG_DEBUG_COLOR 0
 #endif
 
+#ifndef CRC16_ENABLED
+#define CRC16_ENABLED  1
+#endif
+
 // </e>
 
 // </e>

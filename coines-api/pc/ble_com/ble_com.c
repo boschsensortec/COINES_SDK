@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <pthread.h>
 
 #ifdef PLATFORM_WINDOWS
 #include <windows.h>
@@ -88,6 +89,7 @@
 simpleble_uuid_t nordic_uart_service_uuid;
 simpleble_uuid_t nordic_uart_char_rx;
 simpleble_uuid_t nordic_uart_char_tx;
+pthread_mutex_t ble_peripheral_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /**********************************************************************************/
 /* struct declarations */
@@ -106,18 +108,19 @@ struct local_ble_peripheral_info
 /*********************************************************************/
 
 static simpleble_peripheral_t selected_peripheral = NULL;
-static uint8_t peripheral_list_len = 0;
+static volatile uint8_t peripheral_list_len = 0;
 static simpleble_adapter_t selected_adapter = NULL;
-static uint8_t device_response_data[COM_READ_BUFF] = { 0 };
-static uint32_t device_response_length = 0;
+static uint8_t device_response_buffer[COM_READ_BUFF] = { 0 };
 static bool has_tx_notified = false;
 static int8_t ble_scan_result = BLE_COM_OK;
-static bool is_ble_peripheral_connected = false;
+static volatile bool is_ble_peripheral_connected = false;
 static struct local_ble_peripheral_info ble_peripheral_info_list[BLE_PERIPHERAL_LIST_SIZE];
 static bool is_write_data_chunked = false;
 static uint32_t expected_write_data_length = 0;
 static uint32_t actual_write_data_length = 0;
-static bool ble_scan_completed = false;
+static volatile bool ble_scan_completed = false;
+static volatile uint16_t write_idx = 0, read_idx = 0;
+
 
 /*********************************************************************/
 /* static function declarations */
@@ -137,6 +140,9 @@ static void peripheral_on_disconnect(simpleble_peripheral_t peripheral, void *us
 static int8_t ble_notify(void);
 static int8_t connect_to_ble_peripheral(int8_t ble_peripheral_index);
 static void wait_for_tx_notify(void);
+static uint32_t read_from_circular_buffer(uint8_t *buffer, uint32_t n_bytes);
+static void write_to_circular_buffer(uint8_t *data, uint8_t data_length);
+static uint32_t get_buffer_free_space(void);
 
 /*********************************************************************/
 /* Local functions */
@@ -237,7 +243,9 @@ static void peripheral_on_connect(simpleble_peripheral_t peripheral, void *userd
 {
     (void)peripheral;
     (void)userdata;
+    pthread_mutex_lock(&ble_peripheral_mutex);
     is_ble_peripheral_connected = true;
+    pthread_mutex_unlock(&ble_peripheral_mutex);
     printf("\nBLE connection status: Connected\n");
 }
 
@@ -249,13 +257,14 @@ static void peripheral_on_disconnect(simpleble_peripheral_t peripheral, void *us
 {
     (void)peripheral;
     (void)userdata;
+    pthread_mutex_lock(&ble_peripheral_mutex);
     is_ble_peripheral_connected = false;
     ble_scan_completed = false;
-    printf("\nBLE connection status: Disconnected\n");
-    clean_on_exit();
-#ifdef PLATFORM_WINDOWS
-    deinit_dll();
-#endif
+    pthread_mutex_unlock(&ble_peripheral_mutex);
+//     clean_on_exit();
+// #ifdef PLATFORM_WINDOWS
+//     deinit_dll();
+// #endif
 }
 
 /*!
@@ -311,6 +320,7 @@ static void adapter_on_scan_found(simpleble_adapter_t adapter, simpleble_periphe
         return;
     }
 
+    pthread_mutex_lock(&ble_peripheral_mutex);
     if (peripheral_list_len < BLE_PERIPHERAL_LIST_SIZE)
     {
         /* Save the peripheral */
@@ -325,6 +335,7 @@ static void adapter_on_scan_found(simpleble_adapter_t adapter, simpleble_periphe
         /* Release the associated handle. */
         simpleble_peripheral_release_handle(peripheral);
     }
+    pthread_mutex_unlock(&ble_peripheral_mutex);
 
     /* Release all allocated memory. */
     simpleble_free(peripheral_identifier);
@@ -349,6 +360,71 @@ static void track_write_data(size_t data_length)
 }
 
 /*!
+ * @brief Writes `data_length` bytes of data from the provided `data` into the circular buffer.
+ */
+static void write_to_circular_buffer(uint8_t *data, uint8_t data_length)
+{
+    uint8_t i = 0;
+
+    while (i < data_length)
+    {
+        /* Next write index position */
+        uint16_t next_write_idx = (write_idx + 1) % COM_READ_BUFF;
+
+        /* Check if the buffer is full */
+        if (next_write_idx != read_idx)
+        {
+            device_response_buffer[write_idx] = data[i];
+            write_idx = next_write_idx;
+            ++i;
+        }
+        else
+        {
+            /* Buffer is full */
+            break;
+        }
+    }
+}
+
+/*!
+ * @brief Reads `n_bytes` of data from the circular buffer into the provided `buffer`
+ */
+static uint32_t read_from_circular_buffer(uint8_t *buffer, uint32_t n_bytes)
+{
+    uint32_t bytes_read = 0;
+
+    while ((read_idx <= write_idx) && (bytes_read < n_bytes))
+    {
+        buffer[bytes_read] = device_response_buffer[read_idx];
+        read_idx++;
+        bytes_read++;
+    }
+
+    if (read_idx >= write_idx)
+    {
+        read_idx = 0;
+        write_idx = 0;
+    }
+
+    return bytes_read;
+}
+
+/*!
+ * @brief Returns available space in the circular buffer
+ */
+static uint32_t get_buffer_free_space(void)
+{
+    if (write_idx >= read_idx)
+    {
+        return write_idx - read_idx;
+    }
+    else
+    {
+        return (COM_READ_BUFF - read_idx) + write_idx;
+    }
+}
+
+/*!
  * @brief callback function to store device response on TX notify
  */
 static void peripheral_on_notify(simpleble_uuid_t service,
@@ -360,16 +436,18 @@ static void peripheral_on_notify(simpleble_uuid_t service,
     (void)service;
     (void)characteristic;
     (void)userdata;
-    uint32_t new_length;
 
-    new_length = device_response_length + (uint32_t)data_length;
-    if (sizeof(device_response_data) >= new_length)
-    {
-        memcpy(&device_response_data[device_response_length], data, data_length);
-        device_response_length = new_length;
-    }
+    /* Mutex lock */
+    pthread_mutex_lock(&ble_peripheral_mutex);
 
+    /* Write to buffer */
+    /*lint -e1773*/
+    write_to_circular_buffer((uint8_t*) data, (uint8_t)data_length);
+    /*lint +e1773*/
     has_tx_notified = true;
+
+    /* Mutex unlock */
+    pthread_mutex_unlock(&ble_peripheral_mutex);
 
     /*lint -e1746 parameter cannot be chaged to const*/
 }
@@ -379,6 +457,7 @@ static void peripheral_on_notify(simpleble_uuid_t service,
  */
 static int8_t ble_notify(void)
 {
+    /*lint -e605 */
     int8_t error_code = simpleble_peripheral_notify(selected_peripheral,
                                                     nordic_uart_service_uuid,
                                                     nordic_uart_char_tx,
@@ -677,23 +756,33 @@ int8_t ble_write(void *buffer, uint32_t n_bytes)
  */
 int8_t ble_read(void *buffer, uint32_t n_bytes, uint32_t *n_bytes_read)
 {
+    uint32_t bytes_to_read = 0;
+    uint32_t available_bytes;
+
     if (!is_ble_peripheral_connected)
     {
         return BLE_COM_E_PERIPHERAL_NOT_CONNECTED;
     }
 
-    if (has_tx_notified && n_bytes)
-    {
-        if (device_response_length < n_bytes)
-        {
-            n_bytes = device_response_length;
-        }
+    /* Mutex lock */
+    pthread_mutex_lock(&ble_peripheral_mutex);
 
-        memcpy(buffer, device_response_data, n_bytes);
-        *n_bytes_read = n_bytes;
-        device_response_length -= n_bytes;
-        memcpy(device_response_data, &device_response_data[n_bytes], device_response_length);
+    /* If the requested data length is greater than available bytes then send available bytes */
+    available_bytes = get_buffer_free_space();
+    if (n_bytes > available_bytes)
+    {
+        bytes_to_read = available_bytes;
     }
+    else
+    {
+        bytes_to_read = n_bytes;
+    }
+
+    /* Read from buffer */
+    *n_bytes_read = read_from_circular_buffer((uint8_t*)buffer, bytes_to_read);
+
+    /* Mutex unlock */
+    pthread_mutex_unlock(&ble_peripheral_mutex);
 
     return BLE_COM_OK;
 }
@@ -704,19 +793,27 @@ int8_t ble_read(void *buffer, uint32_t n_bytes, uint32_t *n_bytes_read)
  */
 int8_t ble_close(void)
 {
-    int8_t error_code;
+    // int8_t error_code = BLE_COM_OK; 
 
-    (void)simpleble_peripheral_unsubscribe(selected_peripheral, nordic_uart_service_uuid, nordic_uart_char_tx);
-    error_code = simpleble_peripheral_disconnect(selected_peripheral);
-    if (error_code != BLE_COM_OK)
-    {
-        clean_on_exit();
+    // (void)simpleble_peripheral_unsubscribe(selected_peripheral, nordic_uart_service_uuid, nordic_uart_char_tx);
+    // error_code = simpleble_peripheral_disconnect(selected_peripheral);
+	is_ble_peripheral_connected = false;
+	ble_scan_completed = false;
+    clean_on_exit();
 #ifdef PLATFORM_WINDOWS
-        deinit_dll();
+    deinit_dll();
 #endif
 
-        return BLE_COM_E_DISCONNECT_FAILED;
-    }
+//     if (error_code != BLE_COM_OK)
+//     {
+//         clean_on_exit();
+// #ifdef PLATFORM_WINDOWS
+//         deinit_dll();
+// #endif
 
+//         return BLE_COM_E_DISCONNECT_FAILED;
+//     }
+
+    printf("\nBLE connection status: Disconnected\n");
     return BLE_COM_OK;
 }

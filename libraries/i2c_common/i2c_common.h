@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -42,7 +42,7 @@
 #include <string.h>
 
 #include "nrf_gpio.h"
-#if (!(defined(MCU_NICLA) || defined(MCU_APP31)))
+#if (!(defined(MCU_NICLA) || defined(MCU_APP31) || defined(MCU_HEAR3X)))
 #include "nrfx_twim.h"
 #include "nrf_twim.h"
 #include "nrf_delay.h"
@@ -53,6 +53,8 @@
 #define PMIC_CD                        COINES_NICLA_CD_PIN
 #elif defined(MCU_APP31)
 #define PMIC_CD                        COINES_APP31_CD
+#elif defined(MCU_HEAR3X)
+#define PMIC_CD                        COINES_CHRG_CD
 #endif
 #endif
 

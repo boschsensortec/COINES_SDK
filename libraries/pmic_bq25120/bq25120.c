@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -119,7 +119,7 @@ int8_t bq_init(struct bq_dev *dev)
             if (rslt == BQ_OK)
             {
                 /* Give time to driver to reset */
-                rslt = bq_delay_ms(dev,50);
+                // rslt = bq_delay_ms(dev,50);
 				
                 // Set BQ normal operation mode:
                 rslt |= bq_set_mode_config(dev,BQ_NORMAL_OP_ENABLE);
@@ -198,7 +198,7 @@ int8_t bq_set_mode_config(struct bq_dev *dev, uint8_t fctmode)
     {
         /* Read the BQ status register */
         rslt = bq_read_reg(BQ_STATUS_AND_MODE_CTRL_REG, &registervalue, 1, dev);
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
 
         /* Proceed if everything is fine until now */
         if (rslt == BQ_OK)
@@ -231,7 +231,7 @@ int8_t bq_get_status(struct bq_dev *dev, struct bq_status *state)
     {
         /* Read the BQ status register */
         rslt = bq_read_reg(BQ_STATUS_AND_MODE_CTRL_REG, &registervalue, 1, dev);
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
 
         /* Proceed if everything is fine until now */
         if (rslt == BQ_OK)
@@ -348,9 +348,9 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
     {
         cd_entry_state = dev->cd_pin_state; //Save CD initial state
 
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
         bq_cd_set(dev,1);
-        bq_delay_ms(dev,20);
+        // bq_delay_ms(dev,20);
 
         /*Set Buvlo to 2,2V*/
         ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
@@ -369,7 +369,7 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
         fastchrg_cfg.charger_state = BQ_CHARGER_DISABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);
-        bq_delay_ms(dev,100);
+        // bq_delay_ms(dev,100);
 
         /* Read the BQ status register */
         rslt = bq_read_reg(BQ_FAULT_AND_FAULT_MASK_REG, &registervalue, 1, dev);
@@ -395,9 +395,9 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
         ilim_cfg.batuvlo = BQ_BUVLO_2_4_V; //Discharge Cut-off Voltage
         rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
         
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
         bq_cd_set(dev,cd_entry_state);
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
 
     }
     else
@@ -555,6 +555,53 @@ int8_t bq_set_load_ldo(struct bq_dev *dev, struct bq_load_switch cfg)
     return rslt; 
 }
 
+int16_t bq_get_ldo_voltage(uint8_t ldovalue)
+{
+    uint16_t voltage = 0;
+    
+    if (ldovalue & BQ_LOAD_LDO_100_MV) {
+        voltage += BQ_LDO_100_MV;
+    }
+    if (ldovalue & BQ_LOAD_LDO_200_MV) {
+        voltage += BQ_LDO_200_MV;
+    }
+    if (ldovalue & BQ_LOAD_LDO_400_MV) {
+        voltage += BQ_LDO_400_MV;
+    }
+    if (ldovalue & BQ_LOAD_LDO_800_MV) {
+        voltage += BQ_LDO_800_MV;
+    }
+    if (ldovalue & BQ_LOAD_LDO_1600_MV) {
+        voltage += BQ_LDO_1600_MV;
+    }
+    return voltage;
+}
+
+/*!
+ * @brief This API is used to get the load switch and LDO.
+ */
+int8_t bq_get_load_ldo(struct bq_dev *dev, uint8_t *ldovalue)
+{
+    int8_t rslt;
+    uint8_t read_data;
+    
+    /* Check for null pointer in the device structure */
+    rslt = null_ptr_check(dev);
+
+    /* Check for arguments validity */
+    if (rslt == BQ_OK)
+    {
+        rslt = bq_read_reg(BQ_LOAD_AND_LDO_CTRL_REG,&read_data,1,dev);
+        *ldovalue = read_data;
+    }
+    else
+    {
+        rslt = BQ_NULL_PTR;
+    }
+    
+    return rslt; 
+}
+
 /*!
  * @brief This API is used to configure the push-button.
  */
@@ -651,10 +698,10 @@ int8_t bq_get_battery_voltage(struct bq_dev *dev, uint8_t *batvolt)
         cd_entry_state = dev->cd_pin_state; //Save CD initial state
 
         bq_cd_set(dev,1); //Push CD high to get an accurate reading of the battery voltage
-        bq_delay_ms(dev,20);
+        // bq_delay_ms(dev,20);
         
         rslt = bq_write_reg(BQ_VOLT_BASED_BATT_MONITOR_REG,&sendupdate,1,dev);
-        bq_delay_ms(dev,2);
+        // bq_delay_ms(dev,2);
         /* Check for arguments validity */
         if (rslt == BQ_OK)
         {
@@ -806,15 +853,15 @@ int8_t bq_charge_enable(struct bq_dev *dev)
     /* Check for arguments validity */
     if ((rslt == BQ_OK)&&(dev->battery_connected == 0))
     {
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
         bq_cd_set(dev,1);
-        bq_delay_ms(dev,20);
+        // bq_delay_ms(dev,20);
 
         /*Set Buvlo to 2,2V*/
         ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
         ilim_cfg.batuvlo = BQ_BUVLO_2_2_V; //Discharge Cut-off Voltage
         rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
-        //bq_delay_ms(dev,20);
+        //// bq_delay_ms(dev,20);
 
         /*Disable IPREM/TERM Current*/
         prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
@@ -828,7 +875,7 @@ int8_t bq_charge_enable(struct bq_dev *dev)
         fastchrg_cfg.charger_state = BQ_CHARGER_DISABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);
-        bq_delay_ms(dev,100);
+        // bq_delay_ms(dev,100);
 
         /*Read Buvlo fault*/
         bq_get_faults(dev, &faults);
@@ -868,9 +915,9 @@ int8_t bq_charge_enable(struct bq_dev *dev)
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);  
 
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
         bq_cd_set(dev,0);
-        bq_delay_ms(dev,20);
+        // bq_delay_ms(dev,20);
     }
     else if ((rslt == BQ_OK)&&(dev->battery_connected == 1))
     {
@@ -887,9 +934,9 @@ int8_t bq_charge_enable(struct bq_dev *dev)
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);  
 
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
         bq_cd_set(dev,0);
-        bq_delay_ms(dev,20);       
+        // bq_delay_ms(dev,20);       
     }
     else
     {
@@ -926,9 +973,9 @@ int8_t bq_charge_disable(struct bq_dev *dev)
         prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
         rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
 
-        bq_delay_ms(dev,10);
+        // bq_delay_ms(dev,10);
         bq_cd_set(dev,1);
-        bq_delay_ms(dev,20);
+        // bq_delay_ms(dev,20);
 
 #ifdef PRE_CHARGE_EN
         dev->battery_connected = 1;

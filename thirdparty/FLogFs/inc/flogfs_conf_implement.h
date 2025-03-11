@@ -37,11 +37,14 @@ either expressed or implied, of the FLogFS Project.
 #include <stdlib.h>
 
 #include "w25_common.h"
-#include "w25n02jw.h"
 #include "flogfs.h"
-
+#if defined(MCU_APP30) || defined(MCU_HEAR3X)
+#include "w25n02jw.h"
 #include "w25n01gw.h"
 #include "w25m02gw.h"
+#else
+#include "w25n02kw.h"
+#endif
 
 
 /*! Device Id of w25n01gwtbig */
@@ -69,7 +72,11 @@ typedef struct flash_functions
 	w25_nand_error_t (*init)(void);
 	w25_nand_error_t (*mass_erase)(void);
 	w25_nand_error_t (*page_read)(uint32_t);
+#if defined(MCU_APP31)
+	w25_nand_error_t (*bbm_block_swap)(uint16_t, uint16_t, uint32_t, uint8_t);
+#else
 	w25_nand_error_t (*bbm_block_swap)(uint16_t);
+#endif
 	w25_nand_error_t (*get_device_init_status)(void);
 	w25_nand_error_t (*erase_block)(uint32_t , uint32_t);
 	w25_nand_error_t (*read)(uint8_t* , uint32_t , uint32_t );
@@ -77,6 +84,7 @@ typedef struct flash_functions
 	w25_nand_error_t (*load_sector)(const uint8_t* , uint32_t , uint32_t );	
 	w25_nand_error_t (*read_spare)(uint8_t* , int8_t , uint32_t , uint16_t );	
 	w25_nand_error_t (*load_sector_spare)(const uint8_t* , uint32_t , uint32_t);	
+	w25_nand_error_t (*block_bad)(uint16_t);
 }flash_f;
 
 typedef uint8_t flash_spare_t[59];
@@ -115,6 +123,7 @@ static inline flog_result_t flash_initialize(void){
 
 	if(w25_init(&device_id) == W25_NAND_INITIALIZED)
 	{
+#if defined(MCU_APP30) || defined(MCU_HEAR3X)
 		if((device_id == W25N01GW_DEVICE_ID) || (device_id == W25M02GW_DEVICE_ID))
 		{
 			flash.initial_bbm = w25n01gw_initial_bbm;
@@ -153,7 +162,7 @@ static inline flog_result_t flash_initialize(void){
 				flash.load_sector_spare = w25m02gw_load_sector_spare;
 			}
 		}
-		else if((device_id == W25N02JW_DEVICE_ID) || (device_id == W25N02KW_DEVICE_ID)) /*APP3.0 - W25N02JW Latest Flash chip and APP3.1 - W25N02KW Latest Flash chip*/
+		else if(device_id == W25N02JW_DEVICE_ID) 
 		{
 			flash.initial_bbm = w25n02jw_initial_bbm;
 			flash.init_protect_reg = w25n02jw_init_protect_reg;
@@ -175,6 +184,31 @@ static inline flog_result_t flash_initialize(void){
 			flash.read_spare = w25n02jw_read_spare;
 			flash.load_sector_spare = w25n02jw_load_sector_spare;
 		}
+#else
+		if(device_id == W25N02KW_DEVICE_ID) /*APP3.1 - W25N02KW Latest Flash chip*/
+		{
+			flash.initial_bbm = w25n02kw_initial_bbm;
+			flash.init_protect_reg = w25n02kw_init_protect_reg;
+			flash.init_config_reg = w25n02kw_init_config_reg;
+			flash.write_reg = w25n02kw_write_reg;
+			flash.device_reset = w25n02kw_device_reset;
+			flash.read_bbm_table = w25n02kw_read_bbm_table;
+			flash.get_memory_params = w25n02kw_get_memory_params;
+			flash.get_manufacture_and_devid = w25n02kw_get_manufacture_and_devid;
+			flash.init = w25n02kw_init;
+			flash.mass_erase = w25n02kw_mass_erase;
+			flash.page_read = w25n02kw_page_read;
+			flash.bbm_block_swap = w25n02kw_bbm_block_swap;
+			flash.get_device_init_status = w25n02kw_get_device_init_status;
+			flash.erase_block = w25n02kw_erase_block;
+			flash.read = w25n02kw_read;
+			flash.write_sector_with_spare = w25n02kw_write_sector_with_spare;
+			flash.load_sector = w25n02kw_load_sector;
+			flash.read_spare = w25n02kw_read_spare;
+			flash.load_sector_spare = w25n02kw_load_sector_spare;
+			flash.block_bad = w25n02kw_block_bad;
+		}
+#endif
 		else
 		{
 			return FLOG_FAILURE;

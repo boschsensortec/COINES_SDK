@@ -22,15 +22,15 @@ TARGET ?= PC
 APP_START_ADDRESS ?=0x00030000
 
 ifeq ($(TARGET),PC)
-SRC_DIR = pc
-include $(SRC_DIR)/pc.mk
-STATIC_LIB = libcoines-pc.a
-endif
-
-ifeq ($(TARGET),MCU_APP20)
-SRC_DIR = mcu_app20
-include $(SRC_DIR)/mcu_app20.mk
-STATIC_LIB = libcoines-mcu_app20.a
+	ifeq ($(COINES_BACKEND), COINES_PC)
+		SRC_DIR = pc/coines_pc
+		include $(SRC_DIR)/coines_pc.mk
+		STATIC_LIB = libcoines-pc.a
+	else
+		SRC_DIR = pc
+		include $(SRC_DIR)/pc.mk
+		STATIC_LIB = libcoines-pc.a
+	endif
 endif
 
 ifeq ($(TARGET),MCU_APP30)
@@ -49,6 +49,12 @@ ifeq ($(TARGET),MCU_APP31)
 SRC_DIR = mcu_app31
 include $(SRC_DIR)/mcu_app31.mk
 STATIC_LIB = libcoines-mcu_app31.a
+endif
+
+ifeq ($(TARGET),MCU_HEAR3X)
+SRC_DIR = mcu_hear3x
+include $(SRC_DIR)/mcu_hear3x.mk
+STATIC_LIB = libcoines-mcu_hear3x.a
 endif
 
 OBJ_DIR = build/$(TARGET)
@@ -73,7 +79,7 @@ CFLAGS += -D $(TARGET)  -DAPP_START_ADDRESS=$(APP_START_ADDRESS)
 
 GIT_REV_STR_ENABLED ?= 0
 # Define COINES_VERSION as Git revision string, if
-# - Git is installed 
+# - Git is installed
 # - it was run inside a Git repository
 ifneq ($(GIT_REV_STR_ENABLED), 0)
 ifneq ($(shell $(WHERE) git) ,)
@@ -90,6 +96,11 @@ ARFLAGS = -rcs
 #Populates the the CFLAGS_SAVE variable
 -include $(OBJ_DIR)/cflags.save
 
+# Add FREERTOS_CONFIG_PATH to INCLUDEPATHS if USE_FREERTOS is true
+ifeq ($(USE_FREERTOS), 1)
+INCLUDEPATHS += $(FREERTOS_CONFIG_PATH)
+endif
+
 #Compare  CFLAGS_SAVE with CFLAGS,if they differ perform a clean build
 #If CFLAGS_SAVE is empty, don't do anything
 ifneq ($(CFLAGS_SAVE),)
@@ -100,7 +111,7 @@ endif
 endif
 endif
 
- 
+
 ####################################################################
 # Make Targets                                                     #
 ####################################################################
@@ -110,7 +121,7 @@ all: $(STATIC_LIB)
 $(OBJ_DIR):
 	@echo [ MKDIR ] $@
 	@$(MKDIR) $(call syspath,$@)
-	
+
 $(STATIC_LIB): $(OBJ_DIR) $(C_OBJS) $(ASM_OBJS)
 	@echo [ AR ] $@
 	@$(AR) $(ARFLAGS) "$@" $(C_OBJS) $(ASM_OBJS)
@@ -122,13 +133,13 @@ $(OBJ_DIR)/%.S.o: %.S
 	@$(CC) $(CFLAGS) -o "$@" "$<"
 
 $(OBJ_DIR)/%.c.o: %.c
-	@echo [ CC ] $< 
-	@$(CC) $(CFLAGS) -MMD -I . $(addprefix -I,$(INCLUDEPATHS)) -o "$@" "$<"
+	@echo [ CC ] $<
+	@$(CC) $(CFLAGS) -MMD -I . $(addprefix -I,$(INCLUDEPATHS))  -c "$<" -o "$@"
 
 clean:
 	@echo "Cleaning..."
 	@$(RM) $(STATIC_LIB) build
-	
+
 clean_pc:
 ifneq ("$(wildcard $(STATIC_LIB))","")
 	@echo "Cleaning pc..."

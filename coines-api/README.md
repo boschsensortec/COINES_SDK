@@ -64,14 +64,14 @@ Go to the `libcoines-pc.a` and `libcoines.so`/`libcoines.dylib` (macOS) in `coin
 
 -------------------------------------------------------------------------------
 
-## APP2.0/APP3.X/NICLA MCU:
+## APP3.X/NICLA MCU:
 
 1. Ensure you have installed the [GNU ARM Embedded Toolchain](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads).
-2. Use `mingw32-make TARGET=MCU_APP20` (or) `mingw32-make TARGET=MCU_APP30` (or) `mingw32-make TARGET=MCU_APP31` (or) `mingw32-make TARGET=MCU_NICLA`.
-3. The resulting library `libcoines-mcu_app20.a` (or) `libcoines-mcu_app30.a` (or) `libcoines-mcu_app31.a` (or) `libcoines-mcu_nicla.a` and `coines.h` can be separately used in a project.
+2. Use `mingw32-make TARGET=MCU_APP30` (or) `mingw32-make TARGET=MCU_APP31` (or) `mingw32-make TARGET=MCU_NICLA`.
+3. The resulting library `libcoines-mcu_app30.a` (or) `libcoines-mcu_app31.a` (or) `libcoines-mcu_nicla.a` and `coines.h` can be separately used in a project.
 
 #### NOTE
-- The `libcoines-mcu_app20.a` and `libcoines-mcu_app30.a` and `libcoines-mcu_app31.a` have `printf` integration with USB CDC ACM 
+- The `libcoines-mcu_app30.a` and `libcoines-mcu_app31.a` have `printf` integration with USB CDC ACM 
 - libcoines-mcu_nicla.a has `printf` integration with the USB Serial Bridge.
 - File handling functions (`fopen`, `fclose`, `fprintf`, etc.) that can be used on the APP3.X flash memory are also integrated with `libcoines-mcu_app30.a` or `libcoines-mcu_app31.a`.
 - APP3.X BLE (as Nordic UART service) can be used with the functions `fprintf`, `fwrite`, `fscanf`, `fread`, etc., over `bt_w` and `bt_r` files like `stdout`, `stderr`.

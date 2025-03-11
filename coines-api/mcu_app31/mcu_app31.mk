@@ -13,14 +13,17 @@ ifeq ($(PRE_CHARGE_EN),1)
 	CFLAGS += -DPRE_CHARGE_EN
 endif
 
-nRF5_SDK_DIR = ../../thirdparty/nRF5_SDK
-THIRD_PARTY_DIR=../../thirdparty
-LIB_DIR=../../libraries
-COMMON=../common
-ASM_SRCS_COINES = $(nRF5_SDK_DIR)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
+nRF5_SDK_DIR?=../../thirdparty/nRF5_SDK
+THIRD_PARTY_DIR?=../../thirdparty
+LIB_DIR?=../../libraries
+COMMON?=../common
+COINES_API_DIR?=..
+
+FREERTOS_PATH = $(nRF5_SDK_DIR)/external/freertos
+ASM_SRCS_COINES = $(nRF5_SDK_DIR)/modules/nrfx/mdk/gcc_startup_nrf52840.S
 
 C_SRCS_COINES += \
-../coines_common.c \
+$(COINES_API_DIR)/coines_common.c \
 $(COMMON)/mcu_app3x_support.c \
 $(COMMON)/mcu_app3x_interface.c \
 $(COMMON)/mcu_app3x.c \
@@ -31,6 +34,7 @@ $(LIB_DIR)/w25_common/w25_common.c \
 $(LIB_DIR)/w25m02gw/w25m02gw.c \
 $(LIB_DIR)/w25m01gw/w25n01gw.c \
 $(LIB_DIR)/w25n02jw/w25n02jw.c \
+$(LIB_DIR)/w25n02kw/w25n02kw.c \
 $(LIB_DIR)/mqueue/mqueue.c \
 $(LIB_DIR)/uart_common/uart_common.c \
 $(THIRD_PARTY_DIR)/FLogFs/src/flogfs.c \
@@ -52,6 +56,7 @@ $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/prs/nrfx_prs.c \
 $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/prs/nrfx_saadc.c \
 $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/nrfx_uart.c  \
 $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/nrfx_uarte.c  \
+$(nRF5_SDK_DIR)/modules/nrfx/hal/nrf_nvmc.c \
 $(nRF5_SDK_DIR)/components/libraries/usbd/app_usbd.c \
 $(nRF5_SDK_DIR)/components/libraries/usbd/class/cdc/acm/app_usbd_cdc_acm.c \
 $(nRF5_SDK_DIR)/components/libraries/usbd/app_usbd_core.c \
@@ -86,21 +91,49 @@ $(nRF5_SDK_DIR)/components/ble/common/ble_srv_common.c \
 $(nRF5_SDK_DIR)/components/ble/common/ble_conn_params.c \
 $(nRF5_SDK_DIR)/components/libraries/atomic_flags/nrf_atflags.c \
 $(nRF5_SDK_DIR)/components/ble/nrf_ble_qwr/nrf_ble_qwr.c \
-$(nRF5_SDK_DIR)/components/libraries/timer/app_timer.c \
 $(nRF5_SDK_DIR)/components/ble/ble_advertising/ble_advertising.c \
 $(nRF5_SDK_DIR)/components/libraries/ringbuf/nrf_ringbuf.c \
+$(nRF5_SDK_DIR)/components/libraries/crc16/crc16.c \
 $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/nrfx_power_clock.c \
-$(nRF5_SDK_DIR)/components/drivers_nrf/usbd/nrf_drv_usbd.c \
+$(nRF5_SDK_DIR)/components/drivers_nrf/usbd/nrf_drv_usbd.c
+
+ifeq ($(USE_FREERTOS),$(filter $(USE_FREERTOS),1))
+	ifeq ($(USE_RTC_CLOCK),$(filter $(USE_RTC_CLOCK),1))
+		C_SRCS_COINES +=\
+		$(nRF5_SDK_DIR)/components/libraries/timer/app_timer_freertos.c
+	else
+		C_SRCS_COINES +=\
+		$(nRF5_SDK_DIR)/components/libraries/timer/app_timer.c
+	endif
+
+	C_SRCS_COINES +=\
+    $(FREERTOS_PATH)/source/portable/MemMang/heap_4.c\
+	$(FREERTOS_PATH)/source/croutine.c\
+	$(FREERTOS_PATH)/source/event_groups.c\
+	$(FREERTOS_PATH)/source/list.c\
+	$(FREERTOS_PATH)/source/queue.c\
+	$(FREERTOS_PATH)/source/stream_buffer.c\
+	$(FREERTOS_PATH)/source/tasks.c\
+	$(FREERTOS_PATH)/source/timers.c\
+    $(FREERTOS_PATH)/portable/GCC/nrf52/port.c\
+    $(FREERTOS_PATH)/portable/CMSIS/nrf52/port_cmsis.c\
+    $(FREERTOS_PATH)/portable/CMSIS/nrf52/port_cmsis_systick.c
+else
+	C_SRCS_COINES +=\
+	$(nRF5_SDK_DIR)/components/libraries/timer/app_timer.c
+endif
 
 INCLUDEPATHS_COINES += \
-.. \
-. \
-conf \
+$(COMMON) \
+$(COINES_API_DIR) \
+$(COINES_API_DIR)/mcu_app31 \
+$(COINES_API_DIR)/mcu_app31/conf \
 $(THIRD_PARTY_DIR)/ds28e05 \
 $(LIB_DIR)/nrf52_eeprom \
 $(LIB_DIR)/w25_common \
 $(LIB_DIR)/w25m02gw \
 $(LIB_DIR)/w25n02jw \
+$(LIB_DIR)/w25n02kw \
 $(LIB_DIR)/mqueue \
 $(LIB_DIR)/uart_common \
 $(THIRD_PARTY_DIR)/FLogFs/inc \
@@ -145,9 +178,9 @@ $(nRF5_SDK_DIR)/components/softdevice/common \
 $(nRF5_SDK_DIR)/components/libraries/strerror \
 $(nRF5_SDK_DIR)/components/libraries/experimental_section_vars \
 $(nRF5_SDK_DIR)/external/segger_rtt \
-$(LIB_DIR)/nrf52_ble_service/ \
-$(LIB_DIR)/pmic_bq25120/ \
-$(LIB_DIR)/i2c_common/ \
+$(LIB_DIR)/nrf52_ble_service \
+$(LIB_DIR)/pmic_bq25120 \
+$(LIB_DIR)/i2c_common \
 $(nRF5_SDK_DIR)/components/ble/ble_services/ble_nus \
 $(nRF5_SDK_DIR)/components/ble/ble_services/ble_bas \
 $(nRF5_SDK_DIR)/components/ble/ble_link_ctx_manager \
@@ -155,4 +188,14 @@ $(nRF5_SDK_DIR)/components/libraries/atomic_flags \
 $(nRF5_SDK_DIR)/components/ble/nrf_ble_qwr \
 $(nRF5_SDK_DIR)/components/ble/ble_advertising \
 $(nRF5_SDK_DIR)/components/libraries/ringbuf \
+$(nRF5_SDK_DIR)/components/libraries/crc16
+
+ifeq ($(USE_FREERTOS),$(filter $(USE_FREERTOS),1))
+INCLUDEPATHS_COINES += \
+$(FREERTOS_PATH)/source \
+$(FREERTOS_PATH)/source/include \
+$(FREERTOS_PATH)/portable/GCC/nrf52 \
+$(FREERTOS_PATH)/CMSIS/nrf52 \
+$(FREERTOS_PATH)/portable/CMSIS/nrf52
+endif
 

@@ -1,18 +1,23 @@
 TARGET ?= PC
-COINES_BACKEND ?= COINES_BRIDGE
+USE_FREERTOS?=0
 
 # COMPort name to download the binary
-COM_PORT ?= 
+COM_PORT ?=
 
 # On using Software reset API(coines_soft_reset()) from COINES_SDK , After reset device jumps to the address specified in APP_START_ADDRESS.
 APP_START_ADDRESS ?=0x00030000
 
 OBJ_DIR = build/$(TARGET)
 
-ifneq ($(TARGET),$(filter $(TARGET),PC MCU_APP20 MCU_APP30 MCU_NICLA MCU_APP31))
+ifneq ($(TARGET),$(filter $(TARGET),PC MCU_APP30 MCU_NICLA MCU_APP31 MCU_HEAR3X))
     $(info Unsupported 'TARGET' : $(TARGET))
-    $(info Supported 'TARGET's : PC, MCU_APP20, MCU_APP30, MCU_NICLA, MCU_APP31)
+    $(info Supported 'TARGET's : PC, MCU_APP30, MCU_NICLA, MCU_APP31 , MCU_HEAR3X)
     $(error Exit)
+endif
+
+COINES_BACKEND ?= COINES_PC
+ifeq ($(COINES_BACKEND),COINES_BRIDGE)
+    override COINES_BACKEND = COINES_PC
 endif
 
 ifneq ($(LOCATION),$(filter $(LOCATION),RAM FLASH))
@@ -27,7 +32,7 @@ OPT ?= -Os
 # Debug flags, Set to 0 (disable) or 1 (enable)
 DEBUG ?= 0
 ifeq ($(DEBUG),0)
-CFLAGS += -U DEBUG -D NDEBUG 
+CFLAGS += -U DEBUG -D NDEBUG
 else
 CFLAGS += -D DEBUG -U NDEBUG
 endif
@@ -35,8 +40,8 @@ endif
 # Pre-charge enable for APP board 3.1
 PRE_CHARGE_EN ?= 0
 
-################################ MCU Target common - APP2.0,APP3.0,NICLA,MCU_APP31 ############################
-ifeq ($(TARGET),$(filter $(TARGET),MCU_APP20 MCU_APP30 MCU_NICLA MCU_APP31))
+################################ MCU Target common - APP3.0,NICLA,MCU_APP31 ############################
+ifeq ($(TARGET),$(filter $(TARGET),MCU_APP30 MCU_NICLA MCU_APP31 MCU_HEAR3X))
     CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -c $(OPT) -g3 -Wall -D$(TARGET) -DAPP_START_ADDRESS=$(APP_START_ADDRESS) -ffunction-sections -fdata-sections
     CPPFLAGS += -mthumb -mabi=aapcs -mcpu=cortex-m4 -c $(OPT) -g3 -Wall -D$(TARGET) -ffunction-sections -fdata-sections
 
@@ -75,7 +80,7 @@ ifeq ($(OS),Windows_NT)
     ifneq ($(findstring app_switch.exe, $(wildcard $(APP_SWITCH_PATH)/*)),)
         IS_APP_SWITCH_FOUND = $(APP_SWITCH_PATH)
     else
-        IS_APP_SWITCH_FOUND = 
+        IS_APP_SWITCH_FOUND =
     endif
 
     $(info Platform: Windows)
@@ -90,7 +95,7 @@ ifeq ($(OS),Windows_NT)
         LIB_PATH_ARCH ?= $(LIB_PATH)/x64
     else
         LIB_PATH_ARCH ?= $(LIB_PATH)/x86
-        EXTRA_LIBS += -lpatch 
+        EXTRA_LIBS += -lpatch
     endif
     ifeq ($(notdir $(MAKE)),mingw32-make)
         SHELL = cmd
@@ -111,11 +116,15 @@ else
     $(info Platform: Linux / macOS)
     PLATFORM = PLATFORM_LINUX
 
-    ifeq ($(COINES_BACKEND),COINES_BRIDGE)
+    ifeq ($(COINES_BACKEND), $(filter $(COINES_BACKEND), COINES_BRIDGE COINES_PC))
         ifeq ($(shell uname -s),Linux)
             HOST_OS = Linux
         else ifeq ($(shell uname -s),Darwin)
-            HOST_OS = Darwin
+			ifeq ($(COINES_BACKEND), COINES_PC)
+				HOST_OS = Mac
+			else
+				HOST_OS = Darwin
+			endif
         endif
         ifeq ($(shell uname -m),x86_64)
             HOST_ARCH = x64
@@ -123,19 +132,24 @@ else
             HOST_ARCH = x86
         else ifeq ($(shell uname -m),arm64)
             HOST_ARCH = arm64
-            LIBPATHS += /opt/homebrew/lib   
+            LIBPATHS += /opt/homebrew/lib
         endif
 
         DRIVER = LIBUSBP_DRIVER
 
-        LIB_PATH = $(COINES_INSTALL_PATH)/coines-api/pc/serial_com/libusbp-1.0
-        LIB_PATH_ARCH += $(LIB_PATH)/$(HOST_OS)/$(HOST_ARCH)
-        BLE_LIB_PATH = $(COINES_INSTALL_PATH)/coines-api/pc/ble_com/simpleble-0.6.0
-        BLE_LIB_PATH_ARCH += $(BLE_LIB_PATH)/$(HOST_OS)/$(HOST_ARCH)
+		ifeq ($(COINES_BACKEND), COINES_PC)
+			LIB_PATH_ARCH = $(COINES_INSTALL_PATH)/coines-api/pc/coines_pc/platform/$(HOST_OS)/serial/libusbp-1.0/libs/$(HOST_ARCH)
+        	BLE_LIB_PATH_ARCH = $(COINES_INSTALL_PATH)/coines-api/pc/coines_pc/platform/$(HOST_OS)/ble/simpleble-0.6.0/libs/$(HOST_ARCH)
+		else
+			LIB_PATH = $(COINES_INSTALL_PATH)/coines-api/pc/serial_com/libusbp-1.0
+			LIB_PATH_ARCH += $(LIB_PATH)/$(HOST_OS)/$(HOST_ARCH)
+			BLE_LIB_PATH = $(COINES_INSTALL_PATH)/coines-api/pc/ble_com/simpleble-0.6.0
+			BLE_LIB_PATH_ARCH += $(BLE_LIB_PATH)/$(HOST_OS)/$(HOST_ARCH)
+		endif
     else
         DRIVER = LIBUSB_DRIVER
         ifeq ($(shell uname -m),arm64)
-            LIBPATHS += /opt/homebrew/lib   
+            LIBPATHS += /opt/homebrew/lib
         endif
     endif
     RM = rm -rf
@@ -169,9 +183,9 @@ CPP_SRCS += $(EXAMPLE_FILE)
 endif
 
 PROJ_NAME = $(basename $(EXAMPLE_FILE))
-EXE =  $(PROJ_NAME)$(EXT)
-BIN =  $(PROJ_NAME).bin
-HEX =  $(PROJ_NAME).hex
+EXE ?=  $(PROJ_NAME)$(EXT)
+BIN ?=  $(PROJ_NAME).bin
+HEX ?=  $(PROJ_NAME).hex
 APPSWITCH =appswitch
 
 INCLUDEPATHS += $(COINES_INSTALL_PATH)/coines-api
@@ -180,25 +194,6 @@ LIBPATHS += \
 $(LIB_PATH_ARCH) \
 $(BLE_LIB_PATH_ARCH) \
 $(COINES_INSTALL_PATH)/coines-api \
-
-################################ MCU Target - APP2.0 specific ###############################
-
-ifeq ($(TARGET),MCU_APP20)
-    DEVICE_ID = -,108c:ab2d
-        	ifeq ($(LOCATION),RAM)
-            	LD_SCRIPT = $(COINES_INSTALL_PATH)/coines-api/mcu_app20/mcu_app20_ram.ld
-        	else
-        		ifeq ($(EXAMPLE_FILE),coines_bridge_firmware.c)
-					LD_SCRIPT = $(COINES_INSTALL_PATH)/coines-api/mcu_app20/mcu_app20_flash_coines_bridge.ld
-				else
-            		LD_SCRIPT = $(COINES_INSTALL_PATH)/coines-api/mcu_app20/mcu_app20_flash.ld
-            	endif
-        	endif
-
-    LDFLAGS +=  -T $(LD_SCRIPT)
-    LIBS += coines-mcu_app20
-    ARTIFACTS = $(EXE) $(BIN)
-endif
 
 ################################ MCU Target - APP3.0 specific #################################
 
@@ -216,14 +211,14 @@ ifeq ($(TARGET),MCU_APP30)
     # Doesn't work for some reason !
     # LIBS += coines-mcu_app30
     LDFLAGS += -Wl,--whole-archive -L $(COINES_INSTALL_PATH) -lcoines-mcu_app30 -Wl,--no-whole-archive
-    ARTIFACTS = $(EXE) $(BIN) $(HEX) 
-   
+    ARTIFACTS = $(EXE) $(BIN) $(HEX)
+
 endif
 
 ################################ MCU Target - NICLA specific #################################
 
 ifeq ($(TARGET),MCU_NICLA)
-  
+
     LD_SCRIPT = $(COINES_INSTALL_PATH)/coines-api/mcu_nicla/linker_scripts/mcu_nicla_flash_ble.ld
     CFLAGS +=  -mfloat-abi=hard -mfpu=fpv4-sp-d16
     CPPFLAGS +=  -mfloat-abi=hard -mfpu=fpv4-sp-d16
@@ -253,15 +248,40 @@ ifeq ($(TARGET),MCU_APP31)
     ARTIFACTS = $(EXE) $(BIN) $(HEX)
 
 endif
+################################ MCU Target - Hearable specific ############################
+ifeq ($(TARGET),MCU_HEAR3X)
+    DEVICE_ID = -,108c:4b3d
+        ifeq ($(LOCATION),RAM)
+            LD_SCRIPT = $(COINES_INSTALL_PATH)/coines-api/mcu_hear3x/linker_scripts/mcu_hear3x_ram_ble.ld
+        else
+            LD_SCRIPT = $(COINES_INSTALL_PATH)/coines-api/mcu_hear3x/linker_scripts/mcu_hear3x_flash_ble.ld
+        endif
+    CFLAGS +=  -mfloat-abi=hard -mfpu=fpv4-sp-d16
+    CPPFLAGS +=  -mfloat-abi=hard -mfpu=fpv4-sp-d16
+    LDFLAGS += -mfloat-abi=hard -mfpu=fpv4-sp-d16 -T $(LD_SCRIPT)
+
+    # Doesn't work for some reason !
+    # LIBS += coines-mcu_hear3x
+    LDFLAGS += -Wl,--whole-archive -L $(COINES_INSTALL_PATH) -lcoines-mcu_hear3x -Wl,--no-whole-archive
+    ARTIFACTS = $(EXE) $(BIN) $(HEX)
+
+endif
+
 ################################ PC Target - Windows,Linux/macOS ############################
 
 ifeq ($(TARGET),PC)
     CFLAGS += -D$(PLATFORM)
     CPPFLAGS += -D$(PLATFORM)
-    LIBS += coines-pc
+	LIBS += coines-pc
 
     ifeq ($(PLATFORM),PLATFORM_LINUX)
         LIBS += pthread
+    endif
+
+    ifeq ($(PLATFORM),PLATFORM_WINDOWS)
+        ifeq (,$(findstring x86_64,$(GCC_TARGET)))
+            LIBS += pthread
+        endif
     endif
 
     ifeq ($(DRIVER),LEGACY_USB_DRIVER)
@@ -280,7 +300,7 @@ ifeq ($(TARGET),PC)
             EXTRA_LIBS += -l:libsimpleble.a
             EXTRA_LIBS += -ldbus-1
         endif
-        ifeq ($(HOST_OS),Darwin)
+        ifeq ($(shell uname -s),Darwin)
             EXTRA_LIBS += -framework IOKit -framework CoreFoundation -framework Foundation -framework CoreBluetooth
             EXTRA_LIBS += $(LIB_PATH_ARCH)/libusbp-1.a
             EXTRA_LIBS += $(BLE_LIB_PATH_ARCH)/libsimpleble-c.a
@@ -351,7 +371,7 @@ ifeq ($(TARGET),PC)
 	@$(MAKE) -s -C  $(COINES_INSTALL_PATH)/coines-api clean_pc
 endif
 	@echo [ MAKE ] coines-api
-	@$(MAKE) -s -C  $(COINES_INSTALL_PATH)/coines-api TARGET=$(TARGET) OPT=$(OPT) DEBUG=$(DEBUG) COINES_BACKEND=$(COINES_BACKEND) PRE_CHARGE_EN=$(PRE_CHARGE_EN)
+	@$(MAKE) -s -C  $(COINES_INSTALL_PATH)/coines-api TARGET=$(TARGET) OPT=$(OPT) DEBUG=$(DEBUG) COINES_BACKEND=$(COINES_BACKEND) PRE_CHARGE_EN=$(PRE_CHARGE_EN) USE_FREERTOS=$(USE_FREERTOS) USE_RTC_CLOCK=$(USE_RTC_CLOCK) FREERTOS_CONFIG_PATH=$(FREERTOS_CONFIG_PATH)
 	@echo [ LD ] $@
 	@$(CXX) $(LDFLAGS) -o "$@" $(C_OBJS) $(CPP_OBJS) $(ASM_OBJS) $(addprefix -L,$(LIBPATHS)) $(addprefix -l,$(LIBS)) $(EXTRA_LIBS)
 
@@ -368,15 +388,15 @@ $(OBJ_DIR)/%.c.o: %.c
 $(OBJ_DIR)/%.cpp.o: %.cpp
 	@echo [ CXX ] $<
 	@$(CXX) $(CPPFLAGS) -MMD $(addprefix -I,$(INCLUDEPATHS)) -o "$@" "$<"
-	
+
 ifeq ($(IS_APP_SWITCH_FOUND),)
 $(APPSWITCH):
 	@echo "Building app_switch"
 	@$(MAKE) -s -C  $(COINES_INSTALL_PATH)/tools/app_switch clean-all
 	@$(MAKE) -s -C  $(COINES_INSTALL_PATH)/tools/app_switch
-endif	
+endif
 
-ifeq ($(TARGET),$(filter $(TARGET),MCU_APP20 MCU_APP30 MCU_APP31))
+ifeq ($(TARGET),$(filter $(TARGET),MCU_APP30 MCU_APP31 MCU_HEAR3X))
 download: $(APPSWITCH) $(BIN)
 	@$(APP_SWITCH) usb_dfu_bl $(COM_PORT)
 	@echo [ DFU ] $<
@@ -401,5 +421,5 @@ ifneq ($(wildcard $(OBJ_DIR)), )
 	@$(RM) build $(PROJ_NAME) $(PROJ_NAME).elf $(PROJ_NAME).exe $(PROJ_NAME).bin
 	@$(MAKE) -s -C  $(COINES_INSTALL_PATH)/coines-api clean
 endif
-	
+
 .PHONY: all clean clean-all download $(ARTIFACTS) appswitch

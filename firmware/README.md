@@ -1,29 +1,4 @@
 # Firmware
-
-## **Application Board 2.0**
-### app2.0/DevelopmentDesktop_2.0_Firmware_V3.4.fwu2
-- The default firmware is preloaded in APP2.0.
-- This firmware was obsoleted and removed from app2.0 directory. The user is required to use coines_bridge_flash_firmware instead
-
-### app2.0/coines_bootloader/coines_usb_dfu_bl.pkg
-- This is required to run COINES_SDK examples directly on APP2.0 board's microcontroller.
-
-### app2.0/default_bootloader/Bootloader_APP2.0.bin
-- This bootloader is a factory programmed default bootloader for APP2.0 board.
-- It supports USB and Bluetooth modes.
-- The user can flash this binary if they have accidentaly overwritten/erased the flash memory.
-- To flash `Bootloader_APP2.0.bin`:
-  1. Install the [BOSSA](https://github.com/shumatech/BOSSA/releases) software and locate `bossac`.
-  2. Short **J203** with a jumper and power on the board to enter SAM-BA mode.
-  3. Use the following command to flash the binary:
-     ```bash
-     $ bossac -e -w -v -b Bootloader_APP2.0.bin -U -p <com_port>
-     ```
-     
-### app2.0/coines_bridge
-- Enables the communication over serial
-- Run `update_coines_bridge_fw.bat` to update coines_bridge firmware in APP2.0 board's flash location
-
 ---
 ## **Application Board 3.0**
 ### app3.0/DevelopmentDesktop_2.0_Firmware_v1.9.bin

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
-
+Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
 BSD-3-Clause
 
 Redistribution and use in source and binary forms, with or without
@@ -52,3 +51,22 @@ def set_bits_pos_0(reg_val, mask, field_val):
 def set_bits(reg_val, mask, field_val, position):
     """ Sets bits value at the given position """
     return  (reg_val & ~(mask)) | ((field_val << position) & mask)
+
+def combine_bytes_to_value(buffer, start_index, bytes_count):
+    """
+    Combine a specified number of bytes from a buffer into a numeric value.
+
+    Args:
+        buffer (list or bytes): The buffer containing the bytes.
+        start_index (int): The starting index in the buffer to extract the value.
+        bytes_count (int): The number of bytes to combine into the value.
+
+    Returns:
+        tuple: A tuple containing the combined numeric value and the updated index.
+    """
+    if len(buffer) < start_index + bytes_count:
+        raise ValueError("Buffer does not have enough bytes to combine into a value.")
+
+    # Use slicing and int.from_bytes for efficient conversion
+    value = int.from_bytes(buffer[start_index:start_index + bytes_count], byteorder='big')
+    return value, start_index + bytes_count

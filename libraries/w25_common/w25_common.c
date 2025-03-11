@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -50,8 +50,12 @@
 /* own header files */
 /**********************************************************************************/
 #include "w25_common.h"
+#if defined(MCU_APP30) || defined(MCU_HEAR3X)
 #include "w25n01gw.h"
 #include "w25n02jw.h"
+#else
+#include "w25n02kw.h"
+#endif
 
 /**********************************************************************************/
 /* local macro definitions */
@@ -152,6 +156,9 @@ w25_nand_error_t w25_init(uint16_t *device_id)
 
     w25_get_manufacture_and_devid(&info);
 
+
+#if defined(MCU_APP30) || defined(MCU_HEAR3X)
+
     if (((info.device_id == W25N01GW_DEVICE_ID) || (info.device_id == W25M02GW_DEVICE_ID)) &&
         (info.mfg_id == W25_MANUFACTURER_ID))
     {
@@ -163,7 +170,7 @@ w25_nand_error_t w25_init(uint16_t *device_id)
         ret_code = W25_NAND_INITIALIZED;
 
     }
-    else if (((info.device_id == W25N02JW_DEVICE_ID) || (info.device_id == W25N02KW_DEVICE_ID)) && (info.mfg_id == W25_MANUFACTURER_ID))
+    else if ((info.device_id == W25N02JW_DEVICE_ID)  && (info.mfg_id == W25_MANUFACTURER_ID))
     {
         w25n02jw_init_protect_reg();
         w25n02jw_init_config_reg();
@@ -172,11 +179,23 @@ w25_nand_error_t w25_init(uint16_t *device_id)
         w25_init_status = W25_NAND_INITIALIZED;
         ret_code = W25_NAND_INITIALIZED;
     }
+#else
+    if (((info.device_id == W25N02KW_DEVICE_ID)) && (info.mfg_id == W25_MANUFACTURER_ID))
+    {
+        w25n02kw_init_protect_reg();
+        w25n02kw_init_config_reg();
+        initialize_bbm_tables();
+        *device_id = info.device_id;
+        w25_init_status = W25_NAND_INITIALIZED;
+        ret_code = W25_NAND_INITIALIZED;
+    }
+#endif
     else
     {
         *device_id = 0;
         ret_code = W25_NAND_INITIALIZATION_FAILED;
     }
+
 
     return ret_code;
 }

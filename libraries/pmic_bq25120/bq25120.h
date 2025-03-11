@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -82,6 +82,8 @@ int8_t bq_read_reg(uint8_t reg_addr, uint8_t *reg_data, uint32_t length, struct 
 int8_t bq_delay_ms(struct bq_dev *dev, uint32_t period);
 int8_t bq_cd_set(struct bq_dev *dev, uint8_t cd_state);
 int8_t bq_battery_connected(struct bq_dev *dev);
+int8_t bq_get_load_ldo(struct bq_dev *dev, uint8_t *ldovalue);
+int16_t bq_get_ldo_voltage(uint8_t ldovalue);
 const char* bq_check_rslt(int8_t rslt);
 
 #ifdef __cplusplus

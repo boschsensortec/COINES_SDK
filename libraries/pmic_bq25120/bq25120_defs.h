@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -295,6 +295,12 @@ extern "C" {
 #define BQ_TMR_SET_3_H                           UINT8_C(1 << 1)
 #define BQ_TMR_SET_9_H                           UINT8_C(2 << 1)
 #define BQ_TMR_DISABLE                           UINT8_C(3 << 1)
+//LDO MV
+#define BQ_LDO_100_MV                            UINT16_C(100)
+#define BQ_LDO_200_MV                            UINT16_C(200)
+#define BQ_LDO_400_MV                            UINT16_C(400)
+#define BQ_LDO_800_MV                            UINT16_C(800)
+#define BQ_LDO_1600_MV                           UINT16_C(1600)
 
 /***************************************************************************************************/
 

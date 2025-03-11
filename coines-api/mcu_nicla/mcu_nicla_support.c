@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -49,7 +49,7 @@
 #define RTC_PRESCALAR         0
 #define RTC_COUNTER_BITS      24
 #define RTC_TICKS_PER_SECOND  (32768 / (1 + RTC_PRESCALAR))
-#define RTC_RESOLUTION_USEC   (1000000 / RTC_TICKS_PER_SECOND)
+// #define RTC_RESOLUTION_USEC   (1000000 / RTC_TICKS_PER_SECOND)
 #define RTC_TICKS_TO_USEC(t)  (((uint64_t)t * UINT64_C(1000000)) / RTC_TICKS_PER_SECOND)
 
 /**********************************************************************************/
@@ -59,6 +59,7 @@
 /**********************************************************************************/
 /* global variables */
 /**********************************************************************************/
+uint32_t app_start_address = APP_START_ADDRESS;
 
 /**********************************************************************************/
 /* static variables */
@@ -66,8 +67,7 @@
 /* Handle for RTC2 */
 /*lint -e64*/
 const nrfx_rtc_t rtc_handle = NRFX_RTC_INSTANCE(2);
-volatile uint32_t rtc_ticks = 0;
-static uint8_t volatile rtc_overflow_count= 0;
+static volatile uint32_t rtc_overflow = 0;
 
 /* PMIC device instance for battery voltage reading*/
 extern struct led_dev led_dev;
@@ -127,16 +127,12 @@ static void rtc_handler(nrfx_rtc_int_type_t int_type)
         case NRF_DRV_RTC_INT_COMPARE1:
         case NRF_DRV_RTC_INT_COMPARE2:
         case NRF_DRV_RTC_INT_COMPARE3:
+        case NRF_DRV_RTC_INT_TICK:
 
             break;
         case NRF_DRV_RTC_INT_OVERFLOW:
             /* RTC overflow event */
-            rtc_overflow_count= (rtc_overflow_count!= 255) ? (rtc_overflow_count+ 1) : 0;
-            break;
-
-        case NRF_DRV_RTC_INT_TICK:
-            /* RTC tick event */
-            rtc_ticks = (rtc_overflow_count<< RTC_COUNTER_BITS) | nrf_drv_rtc_counter_get(&rtc_handle);
+            rtc_overflow++;
             break;
 
         default:
@@ -218,7 +214,7 @@ const char* coines_get_version()
 void coines_soft_reset(void)
 {
     memcpy((uint32_t *)MAGIC_LOCATION, "COIN", 4); /* *MAGIC_LOCATION = 0x4E494F43; // 'N','O','I','C' */
-    APP_START_ADDR = APP_START_ADDRESS; /* Application start address; */
+    APP_START_ADDR = app_start_address; /* Application start address; */
 
     NVIC_SystemReset();
 }
@@ -254,15 +250,20 @@ void bat_status_read_callback(void)
 	(void) ble_service_battery_level_update(pmic_pull_battery_level(), 1);
 }
 
+static uint64_t get_rtc_ticks(void)
+{
+    return (uint64_t)nrf_drv_rtc_counter_get(&rtc_handle) + ((uint64_t)rtc_overflow << RTC_COUNTER_BITS);
+}
+
 /*!
  * @brief This API is used to get the current counter(RTC) reference time in usec
  *
  * @param[in]   : None
  * @return      : counter(RTC) reference time in usec
  * */
-uint32_t coines_get_realtime_usec(void)
+uint64_t coines_get_realtime_usec(void)
 {
-    return (uint32_t)RTC_TICKS_TO_USEC(rtc_ticks);
+    return RTC_TICKS_TO_USEC(get_rtc_ticks());
 }
 
 /*!
@@ -274,16 +275,12 @@ uint32_t coines_get_realtime_usec(void)
  */
 void coines_delay_realtime_usec(uint32_t period)
 {
-    uint32_t tick_count;
-    uint32_t num_ticks;
+    uint64_t end_time = coines_get_realtime_usec() + period;
 
-    /*lint -e653 -e524 */
-    num_ticks = (period < RTC_RESOLUTION_USEC) ? 1 : (uint32_t)roundf(((float)period / RTC_RESOLUTION_USEC));
-
-    tick_count = ((rtc_overflow_count<< RTC_COUNTER_BITS) | nrf_drv_rtc_counter_get(&rtc_handle));
-
-    while ((((rtc_overflow_count<< RTC_COUNTER_BITS) | nrf_drv_rtc_counter_get(&rtc_handle)) - tick_count) < num_ticks)
-        ;
+    while (coines_get_realtime_usec() < end_time)
+    {
+        /* Do nothing */
+    }
 }
 
 /*!
@@ -303,9 +300,6 @@ uint32_t rtc_config(void)
     err_code = nrfx_rtc_init(&rtc_handle, &rtc_conf, rtc_handler);
     if (err_code == NRFX_SUCCESS)
     {
-        /* Generate a tick event on each tick */
-        nrfx_rtc_tick_enable(&rtc_handle, true);
-
         nrfx_rtc_overflow_enable(&rtc_handle, true);
 
         /* start the RTC */

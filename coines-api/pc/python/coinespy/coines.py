@@ -65,19 +65,30 @@ class ErrorCodes(Enum):
     COINES_E_MAX_SENSOR_COUNT_REACHED = -37
     COINES_E_EEPROM_WRITE_FAILED = -38
     COINES_E_INVALID_EEPROM_RW_LENGTH = -39
-    COINES_E_INVALID_SCOM_CONFIG = -40
-    COINES_E_INVALID_BLE_CONFIG = -41
+    COINES_E_SCOM_INVALID_CONFIG = -40
+    COINES_E_BLE_INVALID_CONFIG = -41
     COINES_E_SCOM_PORT_IN_USE = -42
     COINES_E_UART_INIT_FAILED = -43
     COINES_E_UART_WRITE_FAILED = -44
     COINES_E_UART_INSTANCE_NOT_SUPPORT = -45
     COINES_E_BLE_ADAPTOR_NOT_FOUND = -46
-    COINES_E_ADAPTER_BLUETOOTH_NOT_ENABLED = -47
+    COINES_E_BLE_ADAPTER_BLUETOOTH_NOT_ENABLED = -47
     COINES_E_BLE_PERIPHERAL_NOT_FOUND = -48
     COINES_E_BLE_LIBRARY_NOT_LOADED = -49
-    COINES_E_APP_BOARD_BLE_NOT_FOUND = -50
+    COINES_E_BLE_APP_BOARD_NOT_FOUND = -50
     COINES_E_BLE_COMM_FAILED = -51
     COINES_E_INCOMPATIBLE_FIRMWARE = -52
+    COINES_E_READ_TIMEOUT = -53
+    COINES_E_VDD_CONFIG_FAILED = -54
+    COINES_E_VDDIO_CONFIG_FAILED = -55
+    COINES_E_SERIAL_COMM_FAILED = -56
+    COINES_E_INTERFACE_FAILED = -57
+    COINES_E_DECODER_FAILED = -58
+    COINES_E_ENCODER_FAILED = -59
+    COINES_E_PTHREAD_FAILED = -60
+    COINES_E_DEINIT_FAILED = -61
+    COINES_E_STREAMING_INIT_FAILURE = -62
+    COINES_E_INVALID_PARAM = -63
     COINES_E_UNDEFINED_CODE = -100
 
 
@@ -136,6 +147,12 @@ class SPITransferBits(Enum):
     SPI16BIT = 16   # 16 bit register read/write
 
 
+class I2CTransferBits(Enum):
+    """ Used to define the i2c bits either 8 or 16 """
+    I2C8BIT = 8     # 8 bit register read/write
+    I2C16BIT = 16   # 16 bit register read/write
+
+
 class SPIMode(Enum):
     """ Used to define the spi mode """
     MODE0 = 0x00   # SPI Mode 0: CPOL=0; CPHA=0
@@ -173,6 +190,25 @@ class MultiIOPin(Enum):
     MINI_SHUTTLE_PIN_2_7 = 0x1D  # GPIO6
     MINI_SHUTTLE_PIN_2_8 = 0x1E  # GPIO7
 
+        # Hearable Pins pins
+    HEARABLE_SHUTTLE_PIN_1 = 0x28 #GPIO1 */
+    HEARABLE_SHUTTLE_PIN_2 = 0x29 #GPIO_SDI */
+    HEARABLE_SHUTTLE_PIN_3 = 0x2A #GPIO2 */
+    HEARABLE_SHUTTLE_PIN_4 = 0x2B #GPIO_SDO */
+    HEARABLE_SHUTTLE_PIN_5 = 0x2C #GPIO3 */
+    HEARABLE_SHUTTLE_PIN_6 = 0x2D #GPIO_SCK */
+    HEARABLE_SHUTTLE_PIN_7 = 0x2E #GPIO4 */
+    HEARABLE_SHUTTLE_PIN_8 = 0x2F #GPIO_CS0 */
+    HEARABLE_SHUTTLE_PIN_9 = 0x30 #I2C_SDA */
+    HEARABLE_SHUTTLE_PIN_10 = 0x31 #GPIO_CS1 */
+    HEARABLE_SHUTTLE_PIN_11 = 0x32 #I2C_SCL */
+    HEARABLE_SHUTTLE_PIN_12 = 0x33 #GPIO_CS2 */ 
+    HEARABLE_SHUTTLE_PIN_13 = 0x34 #INT0 */
+    HEARABLE_SHUTTLE_PIN_14 = 0x35 #UART_TX */ 
+    HEARABLE_SHUTTLE_PIN_15 = 0x36 #INT1 */
+    HEARABLE_SHUTTLE_PIN_16 = 0x37 #UART_RX */ 
+    HEARABLE_SHUTTLE_PIN_17 = 0x38 #INT2 */ 
+
 
 class SensorInterface(Enum):
     """ To define Sensor interface """
@@ -198,6 +234,7 @@ class StreamingMode(Enum):
     """ Defines streaming modes """
     STREAMING_MODE_POLLING = 0    # Polling mode streaming
     STREAMING_MODE_INTERRUPT = 1  # Interrupt mode streaming
+    STREAMING_MODE_DMA_INTERRUPT = 2  # DMA Interrupt mode streaming
 
 
 class StreamingState(Enum):
@@ -266,6 +303,14 @@ class StreamingClearOnWriteConfig(ct.Structure):
                 ('DataBuf', ct.c_uint8 * 255)]
 
 
+class StreamingDMAConfig(ct.Structure):
+    """ Variables to store the streaming clear on write settings """
+    _fields_ = [('CtrlAddr', ct.c_uint16),
+                ('StartAddressCmd', ct.c_uint16),
+                ('ReadAddr', ct.c_uint16),
+                ('ReadLen', ct.c_uint8)]
+
+
 class StreamingBlocks(ct.Structure):
     """ Variables to store the streaming address blocks """
     _fields_ = [('NoOfBlocks', ct.c_uint16),        # Number of blocks.
@@ -291,14 +336,15 @@ class StreamingConfig(ct.Structure):
                 ('ClearOnWrite', ct.c_uint8),
                 ('HwPinState', ct.c_uint8),
                 ('ClearOnWriteConfig', StreamingClearOnWriteConfig),
+                ('DMAConfig', StreamingDMAConfig),
                 ('IntlineCount', ct.c_uint8),
                 ('IntlineInfo', ct.c_uint8 * COINES_MAX_INT_LINE)]
 
 
 class CBleComConfig(ct.Structure):
     """ Variables to store ctype BLE com config settings """
-    _fields_ = [("Address", ct.c_char * 200),
-                ("Identifier", ct.c_char * 200),
+    _fields_ = [("Address", ct.c_char * 250),
+                ("Identifier", ct.c_char * 250),
                 ]
 
 
@@ -437,7 +483,7 @@ class CoinesBoard:
         self.__current_vddio = 0
         self.__sensor_interface_detail = -1
         self._sensor_interface = SensorInterface.I2C.value
-        self.__spi_16bit_enable = False
+        self.__16bit_enable = False
 
         if path_to_coines_lib:
             try:
@@ -453,14 +499,32 @@ class CoinesBoard:
         if self._lib is None:
             print(r"""
             Could not load COINES_SDK lib shared library. Please initialize the
-            UserApplicationBoard object with the path to the library, e.g.
-            board = BST.UserApplicationBoard(r'libcoines.dll')
+            CoinesBoard object with the path to the library, e.g.
+            import coinespy as cpy
+            board = cpy.CoinesBoard(r'libcoines.dll')
             """)
             sys.exit(-1)
 
+        self.lib_version = self.get_version()
+
+    def get_version(self):
+        """ Returns the version of the COINES_SDK library """
         coines_get_version = self._lib.coines_get_version
         coines_get_version.restype = ct.c_char_p
-        self.lib_version = coines_get_version().decode("utf-8")
+        return coines_get_version().decode("utf-8")
+
+    def unload_library(self):
+        """
+        Unloads the library
+        """
+        handle = ct.c_void_p(self._lib._handle)
+        if os.name == 'posix':
+            # Unix-like system
+            libc = ct.CDLL('libc.so.6' if platform.system() == 'Linux' else 'libc.dylib')
+            libc.dlclose(handle)
+        elif os.name == 'nt':
+            # Windows system
+            ct.windll.kernel32.FreeLibrary(handle)
 
     def wrap_function(self, func_name: str, restype, argtypes):
         """ wrapping the func_name function equivalent to COINES_SDK header file with same name
@@ -515,7 +579,7 @@ class CoinesBoard:
         :return: A tuple containing list of BLE peripheral information and peripheral count
         """
         self._lib.coines_scan_ble_devices.argtypes = [
-            ct.POINTER(CBleComConfig), ct.POINTER(ct.c_uint8), ct.c_size_t]
+            ct.POINTER(CBleComConfig), ct.POINTER(ct.c_uint8), ct.c_uint32]
         self._lib.coines_scan_ble_devices.restype = ct.c_int16
 
         ble_com_config = (CBleComConfig * 100)()
@@ -541,6 +605,7 @@ class CoinesBoard:
         :return: ErrorCodes
         """
         ret = self._lib.coines_close_comm_intf(self.__pc_interface, arg)
+        self.unload_library()
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
         return self.error_code
 
@@ -633,6 +698,69 @@ class CoinesBoard:
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
         return self.error_code
 
+    def get_millis(self) -> int:
+        """ Get the current time in milliseconds
+
+        :return: current time in milliseconds
+        """
+        millisecond = self._lib.coines_get_millis()
+        return millisecond
+
+    def get_micro_sec(self) -> int:
+        """ Get the current time in microseconds
+
+        :return: current time in microseconds
+        """
+        microsecond = self._lib.coines_get_micro_sec()
+        return microsecond
+
+    def write_intf(self, interface, data: List[int]):
+        """ Write data to the communication interface
+        """
+        data = (ct.c_uint8 * len(data))(*data)
+        write_intf_func = self.wrap_function('coines_write_intf', None,
+                                             [ct.c_uint8, ct.c_void_p, ct.c_uint16])
+        write_intf_func(interface.value, data, len(data))
+
+    def read_intf(self, interface, length: int) -> Tuple[List[int], int]:
+        """ Read data from the communication interface
+        """
+        data = (ct.c_uint8 * length)()
+        read_intf_func = self.wrap_function('coines_read_intf', ct.c_uint16,
+                                            [ct.c_uint8, ct.c_void_p, ct.c_uint16])
+        n_bytes_read = read_intf_func(interface.value, data, length)
+        return data[:n_bytes_read]
+
+    def shuttle_eeprom_write(self, start_addr: int, data: List[int]) -> ErrorCodes:
+        """ Write data to the shuttle EEPROM
+        """
+        data = (ct.c_uint8 * len(data))(*data)
+        write_eeprom_func = self.wrap_function('coines_shuttle_eeprom_write', ct.c_int16,
+                                               [ct.c_uint16, ct.POINTER(ct.c_uint8), ct.c_uint16])
+        ret = write_eeprom_func(start_addr, data, len(data))
+        self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
+        return self.error_code
+
+    def shuttle_eeprom_read(self, start_addr: int, length: int) -> Tuple[ErrorCodes, List[int]]:
+        """ Read data from the shuttle EEPROM
+        """
+        data = (ct.c_uint8 * length)()
+        read_eeprom_func = self.wrap_function('coines_shuttle_eeprom_read', ct.c_int16,
+                                              [ct.c_uint16, ct.POINTER(ct.c_uint8), ct.c_uint16])
+        ret = read_eeprom_func(start_addr, data, length)
+        self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
+        return self.error_code, list(data)
+
+    def get_coines_error_str(self, int):
+        """ Get the error string for the error code
+
+        :param int: error code
+        :return: error string
+        """
+        get_err_str = self.wrap_function('get_coines_error_str', ct.c_char_p, [ct.c_int16])
+        error_str = get_err_str(ct.c_int16(int))
+        return error_str.decode()
+
     def config_i2c_bus(self, bus: I2CBus, i2c_address: int, i2c_mode: I2CMode) -> ErrorCodes:
         """ Configures the I2C Bus
 
@@ -643,10 +771,9 @@ class CoinesBoard:
         """
         self.__sensor_interface_detail = i2c_address
         self._sensor_interface = SensorInterface.I2C.value
-        self.__spi_16bit_enable = False
+        self.__16bit_enable = False
         ret = self._lib.coines_config_i2c_bus(
             bus.value, i2c_mode.value)  # Always use bus COINES_I2C_BUS_0,
-        # more are not available on APP2.0
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
         return self.error_code
 
@@ -672,7 +799,7 @@ class CoinesBoard:
         """
         self.__sensor_interface_detail = cs_pin
         self._sensor_interface = SensorInterface.SPI.value
-        self.__spi_16bit_enable = False
+        self.__16bit_enable = False
         ret = self._lib.coines_config_spi_bus(
             bus.value, spi_speed.value, spi_mode.value)
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
@@ -702,9 +829,9 @@ class CoinesBoard:
         self.__sensor_interface_detail = cs_pin
         self._sensor_interface = SensorInterface.SPI.value
         if spi_bits == SPITransferBits.SPI16BIT:
-            self.__spi_16bit_enable = True
+            self.__16bit_enable = True
         else:
-            self.__spi_16bit_enable = False
+            self.__16bit_enable = False
         ret = self._lib.coines_config_word_spi_bus(
             bus.value, spi_speed.value, spi_mode.value, spi_bits.value)
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
@@ -729,6 +856,47 @@ class CoinesBoard:
         return self.error_code
 
     # -------------------------------------------- Read ----------------------------------------------
+    def read_16bit_i2c(self, bus: I2CBus, register_address: int, number_of_reads=2,
+                       sensor_interface_detail: int = None,
+                       i2c_transfer_bits: I2CTransferBits = I2CTransferBits.I2C16BIT):
+        """ Reads 16 bits from I2C bus and returns it
+
+        :param bus: use I2CBus
+        :param register_address:
+        :param number_of_reads:
+        :param sensor_interface_detail:
+        :return : Array of data
+        """
+        if i2c_transfer_bits == I2CTransferBits.I2C16BIT:
+            reg_i2c_transfer_bits = ct.c_uint16
+        else:
+            reg_i2c_transfer_bits = ct.c_uint8
+        reg_data = (reg_i2c_transfer_bits * number_of_reads)()
+        interface = self.__interface(sensor_interface_detail)
+        wrapper_params_types = [
+            ct.c_int,
+            ct.c_uint8,
+            ct.c_uint16,
+            ct.POINTER(reg_i2c_transfer_bits),
+            ct.c_uint16,
+            ct.c_int
+        ]
+        wrapper_ret_type = ct.c_int8
+        coines_read_16bit_i2c = self.wrap_function(
+            'coines_read_16bit_i2c', wrapper_ret_type, wrapper_params_types
+        )
+        ret = coines_read_16bit_i2c(
+            ct.c_int(bus.value),
+            ct.c_uint8(interface),
+            ct.c_uint16(register_address),
+            reg_data,
+            ct.c_uint16(number_of_reads),
+            ct.c_int(i2c_transfer_bits.value)
+        )
+        self.error_code = ErrorCodes(ct.c_int16(ret).value)
+        reg_data = list(reg_data)
+        return reg_data
+
     def read_i2c(self, bus: I2CBus, register_address: int,
                  number_of_reads=1, sensor_interface_detail: int = None):
         """ Reads from I2C bus and returns it
@@ -748,7 +916,8 @@ class CoinesBoard:
         return reg_data
 
     def read_16bit_spi(self, bus: SPIBus, register_address: int, number_of_reads=2,
-                       sensor_interface_detail: int = None):
+                       sensor_interface_detail: int = None,
+                       spi_transfer_bits: SPITransferBits = SPITransferBits.SPI16BIT):
         """ Reads 16 bits from SPI bus and returns it
 
         :param bus: use SPIBus
@@ -757,19 +926,35 @@ class CoinesBoard:
         :param sensor_interface_detail:
         :return : Array of data
         """
-        interface = self.__interface(sensor_interface_detail)
-        array_type = (ct.c_int16 * number_of_reads)()
-        self._lib.coines_read_16bit_spi.argtypes = [
-            ct.c_char, ct.c_int16, ct.POINTER(ct.c_int16), ct.c_int16]
-        if self._sensor_interface == SensorInterface.SPI.value:  # SPI bus configured
-            ret = self._lib.coines_read_16bit_spi(bus.value, interface, int(register_address),
-                                                  ct.cast(array_type, ct.POINTER(ct.c_int16)), int(number_of_reads))
+        if spi_transfer_bits == SPITransferBits.SPI16BIT:
+            reg_spi_transfer_bits = ct.c_uint16
         else:
-            raise RuntimeError('No bus configured')
-
-        self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
-
-        return array_type
+            reg_spi_transfer_bits = ct.c_uint8
+        reg_data = (reg_spi_transfer_bits * number_of_reads)()
+        interface = self.__interface(sensor_interface_detail)
+        wrapper_params_types = [
+            ct.c_int,
+            ct.c_uint8,
+            ct.c_uint16,
+            ct.POINTER(reg_spi_transfer_bits),
+            ct.c_uint16,
+            ct.c_int
+        ]
+        wrapper_ret_type = ct.c_int8
+        coines_read_16bit_spi = self.wrap_function(
+            'coines_read_16bit_spi', wrapper_ret_type, wrapper_params_types
+        )
+        ret = coines_read_16bit_spi(
+            ct.c_int(bus.value),
+            ct.c_uint8(interface),
+            ct.c_uint16(register_address),
+            reg_data,
+            ct.c_uint16(number_of_reads),
+            ct.c_int(spi_transfer_bits.value)
+        )
+        self.error_code = ErrorCodes(ct.c_int16(ret).value)
+        reg_data = list(reg_data)
+        return reg_data
 
     def read_spi(self, bus: SPIBus, register_address: int,
                  number_of_reads=1, sensor_interface_detail: int = None):
@@ -812,6 +997,49 @@ class CoinesBoard:
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
         return self.error_code
 
+    def write_16bit_i2c(self, bus: I2CBus, register_address: int,
+                        register_value: int, sensor_interface_detail: int = None,
+                        i2c_transfer_bits: I2CTransferBits = I2CTransferBits.I2C16BIT) -> ErrorCodes:
+        """ Writes 16 bits to I2C bus
+
+        :param bus: use I2CBus
+        :param register_address:
+        :param register_value:
+        :param sensor_interface_detail:
+        :return: ErrorCodes
+        """
+        if i2c_transfer_bits == I2CTransferBits.I2C16BIT:
+            self.__16bit_enable = True
+            reg_i2c_transfer_bits = ct.c_uint16
+        else:
+            self.__16bit_enable = False
+            reg_i2c_transfer_bits = ct.c_uint8
+        write_data, reg_length = self.__write_data_and_reg_length(
+            register_value)
+        interface = self.__interface(sensor_interface_detail)
+        wrapper_params_types = [
+            ct.c_int,
+            ct.c_uint8,
+            ct.c_uint16,
+            ct.POINTER(reg_i2c_transfer_bits),
+            ct.c_uint16,
+            ct.c_int
+        ]
+        wrapper_ret_type = ct.c_int8
+        coines_write_16bit_i2c = self.wrap_function(
+            'coines_write_16bit_i2c', wrapper_ret_type, wrapper_params_types
+        )
+        ret = coines_write_16bit_i2c(
+            ct.c_int(bus.value),
+            ct.c_uint8(interface),
+            ct.c_uint16(register_address),
+            write_data,
+            ct.c_uint16(reg_length),
+            ct.c_int(i2c_transfer_bits.value)
+        )
+        self.error_code = ErrorCodes(ct.c_int16(ret).value)
+        return self.error_code
+
     def write_spi(self, bus: SPIBus, register_address: int,
                   register_value: int, sensor_interface_detail: int = None) -> ErrorCodes:
         """ Writes to SPI bus
@@ -822,6 +1050,7 @@ class CoinesBoard:
         :param sensor_interface_detail:
         :return: ErrorCodes
         """
+        self.__16bit_enable = False
         write_data, reg_length = self.__write_data_and_reg_length(
             register_value)
         interface = self.__interface(sensor_interface_detail)
@@ -831,7 +1060,8 @@ class CoinesBoard:
         return self.error_code
 
     def write_16bit_spi(self, bus: SPIBus, register_address: int,
-                        register_value: List[int], sensor_interface_detail: int = None) -> ErrorCodes:
+                        register_value: list, sensor_interface_detail: int = None,
+                        spi_transfer_bits: SPITransferBits = SPITransferBits.SPI16BIT) -> ErrorCodes:
         """ Writes 16 bits to SPI bus
 
         :param bus: use SPIBus
@@ -840,12 +1070,36 @@ class CoinesBoard:
         :param sensor_interface_detail:
         :return: ErrorCodes
         """
+        if spi_transfer_bits == SPITransferBits.SPI16BIT:
+            self.__16bit_enable = True
+            reg_spi_transfer_bits = ct.c_uint16
+        else:
+            self.__16bit_enable = False
+            reg_spi_transfer_bits = ct.c_uint8
         write_data, reg_length = self.__write_data_and_reg_length(
             register_value)
         interface = self.__interface(sensor_interface_detail)
-        ret = self._lib.coines_write_16bit_spi(bus.value, interface, register_address,
-                                               ct.cast(write_data, ct.POINTER(ct.c_int16)), reg_length)
-        self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
+        wrapper_params_types = [
+            ct.c_int,
+            ct.c_uint8,
+            ct.c_uint16,
+            ct.POINTER(reg_spi_transfer_bits),
+            ct.c_uint16,
+            ct.c_int
+        ]
+        wrapper_ret_type = ct.c_int8
+        coines_write_16bit_spi = self.wrap_function(
+            'coines_write_16bit_spi', wrapper_ret_type, wrapper_params_types
+        )
+        ret = coines_write_16bit_spi(
+            ct.c_int(bus.value),
+            ct.c_uint8(interface),
+            ct.c_uint16(register_address),
+            write_data,
+            ct.c_uint16(reg_length),
+            ct.c_int(spi_transfer_bits.value)
+        )
+        self.error_code = ErrorCodes(ct.c_int16(ret).value)
         return self.error_code
 
     def soft_reset(self):
@@ -876,9 +1130,9 @@ class CoinesBoard:
         ret = self._lib.coines_echo_test(write_data, length)
         self.error_code = CoinesBoard.convert_to_signed_error_code(ret)
         return self.error_code
-        # ------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------
 
-    # -------------------------------------------- Streaming ----------------------------------------------
+    # -------------------------------------------- Streaming ---------------------------------------
     def config_streaming(self, sensor_id: int,
                          stream_config: StreamingConfig, data_blocks: StreamingBlocks) -> ErrorCodes:
         """ Sends the streaming settings to the board
@@ -943,14 +1197,14 @@ class CoinesBoard:
         self.error_code = ErrorCodes(ct.c_int16(ret).value)
         return self.error_code
 
-        # ------------------------------------------------------------------------------------------------
+    # ------------------------------------------------------------------------------------------------
 
     # --------------------------------- Internal support functions -----------------------------------
     def __write_data(self, reg_length):
-        if self.__spi_16bit_enable is False:
-            write_data = ct.create_string_buffer(reg_length)
-        else:
+        if self.__16bit_enable:
             write_data = (ct.c_int16 * 1)()
+        else:
+            write_data = ct.create_string_buffer(reg_length)
         return write_data
 
     def __write_data_and_reg_length(self, register_value):
@@ -963,9 +1217,10 @@ class CoinesBoard:
 
         elif isinstance(register_value, list):
             reg_length = len(register_value)
-            write_data = self.__write_data(reg_length)
-            for i in range(reg_length):
-                write_data[i] = register_value[i]
+            if self.__16bit_enable:
+                write_data = (ct.c_uint16 * reg_length)(*register_value)
+            else:
+                write_data = (ct.c_uint8 * reg_length)(*register_value)
 
         return write_data, reg_length
 

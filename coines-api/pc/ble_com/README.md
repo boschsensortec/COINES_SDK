@@ -75,7 +75,7 @@ You can find the BLE name of your App board by using the Bluetooth settings in W
 
 #### Using coines_bridge script - ble_com_test.c
 
-1. $ cd coines_2.0\examples\c\ble_com_test\
+1. $ cd coines_2.0\examples\c\common\ble_com_test\
 
 2. $ mingw32-make
 

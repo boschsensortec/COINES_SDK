@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
-
+Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
 BSD-3-Clause
 
 Redistribution and use in source and binary forms, with or without
@@ -1107,7 +1106,7 @@ class BMI08X:
         self.verify_error(keyword="configuring Pin", exit_flag=True)
 
         self.board.config_spi_bus(
-            self.bus_instance, self.SPI_CS_ACCEL, cpy.SPISpeed.SPI_5_MHZ, cpy.SPIMode.MODE3)
+            self.bus_instance, self.SPI_CS_ACCEL, cpy.SPISpeed.SPI_10_MHZ, cpy.SPIMode.MODE3)
         self.verify_error(keyword="configuring spi bus", exit_flag=True)
 
     def config_i2c(self):

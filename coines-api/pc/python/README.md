@@ -1,6 +1,6 @@
 # `coinespy` library
 
-With the `coinespy` library, users can access Bosch Sensortec's MEMS sensors on the Application Board 2.0 and Application Board 3.X through a Python interface. It offers a flexible solution for developing a host-independent sensor wrapper interface with a robust error-handling mechanism. The core functionalities remain the same as using coinesAPI on the C level.
+With the `coinespy` library, users can access Bosch Sensortec's MEMS sensors on the Application Board 3.X through a Python interface. It offers a flexible solution for developing a host-independent sensor wrapper interface with a robust error-handling mechanism. The core functionalities remain the same as using coinesAPI on the C level.
 
 This **coinespy** folder contains the Python wrapper on top of the COINES C library.
 * Dependencies libraries / software
@@ -34,7 +34,43 @@ This **coinespy** folder contains the Python wrapper on top of the COINES C libr
     ``` bash
     $ mingw32-make ARCH=x86_64
     ```
+# `Configurable parameter when generating library`
+## Configure buffer size based on application need 
+The following parameters allow configuring buffer size and queue depth as per application requirements.
+```
+CBUFF_SIZE=104857600  # 100MB  
+MQUEUE_DEPTH=100  
+```
+## Streaming Support
+FIFO streaming is only supported in interrupt streaming mode. The packet size should be configured based on application needs.
+* Example Configurations:
+  * Interrupt Streaming
+  ```
+  MQUEUE_PACKET_SIZE=255
+  ```
+  * FIFO Streaming - Watermark Level Calculation
+    * Formula: Watermark Level = (Frame Length × Samples) + Packet Counter (4 Bytes) + Dummy Bytes (2 Bytes) + Ignore Bytes (Frame Header, if any - 2 Bytes)
+    * Example Calculation: (18 × 30) + 4 + 2 + 2 = 548
+  ```
+  MQUEUE_PACKET_SIZE ?= 548  
+  ```
+  Note: Maximum supported streaming buffer size is 3KB.
 
+## Timeout Configuration
+Default values are configured inside the library, considering lower ODR (0.78Hz):
+```
+STREAM_RSP_TIMEOUT_MS = 1500  
+FIFO_STREAM_RSP_TIMEOUT_MS = 10000  
+```
+## Custom Timeout Configuration
+Timeout values can be adjusted based on application requirements:
+```
+STREAM_RSP_TIMEOUT ?= 0  # Milliseconds  
+FIFO_STREAM_RSP_TIMEOUT ?= 0  # Milliseconds  
+```
+Note: If its zero default values inside the library will be utilized.
+
+# Installation
 To install this package, use the following code:
 ```bash
 $ python setup.py install

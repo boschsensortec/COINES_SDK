@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -48,10 +48,10 @@
 #define RTC_PRESCALAR          0
 #define RTC_COUNTER_BITS       24
 #define RTC_TICKS_PER_SECOND   (32768 / (1 + RTC_PRESCALAR))
-#define RTC_RESOLUTION_USEC    (1000000 / RTC_TICKS_PER_SECOND)
+// #define RTC_RESOLUTION_USEC    (1000000 / RTC_TICKS_PER_SECOND)
 #define RTC_TICKS_TO_USEC(t)   (((uint64_t)t * UINT64_C(1000000)) / RTC_TICKS_PER_SECOND)
 
-#define EEPROM_RW_RETRY_COUNT  10
+#define EEPROM_RW_RETRY_COUNT  50
 
 /**********************************************************************************/
 /* constant definitions */
@@ -60,17 +60,18 @@
 /**********************************************************************************/
 /* global variables */
 /**********************************************************************************/
-#if defined(MCU_APP31)
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
 extern uint8_t pmic_pull_battery_level(void);
 #endif
 
+/* Handles the request to switch to bootloader mode from the application */
+uint32_t app_start_address = APP_START_ADDRESS;
 /**********************************************************************************/
 /* static variables */
 /**********************************************************************************/
 /* Handle for RTC2 */
 const nrfx_rtc_t rtc_handle = NRFX_RTC_INSTANCE(2);
-volatile uint32_t rtc_count = 0;
-static uint8_t volatile rtc_overflow = 0;
+static volatile uint32_t rtc_overflow = 0;
 static volatile bool is_timer_enabled[COINES_TIMER_INSTANCE_MAX] = { false, false };
 
 #if defined(MCU_APP30)
@@ -160,6 +161,7 @@ static void gpiohandler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
  * @param[in]   : None
  * @return      : shuttle id
  */
+#if (defined(MCU_APP30)||defined(MCU_APP31))
 static uint16_t get_shuttle_id()
 {
     uint16_t shuttle_id = 0;
@@ -169,6 +171,12 @@ static uint16_t get_shuttle_id()
     NRFX_IRQ_ENABLE(USBD_IRQn);
 
     return shuttle_id;
+}
+#endif
+
+static uint64_t get_rtc_ticks(void)
+{
+    return (uint64_t)nrf_drv_rtc_counter_get(&rtc_handle) + ((uint64_t)rtc_overflow << RTC_COUNTER_BITS);
 }
 
 /*!
@@ -183,17 +191,14 @@ static void rtc_handler(nrfx_rtc_int_type_t int_type)
         case NRF_DRV_RTC_INT_COMPARE1:
         case NRF_DRV_RTC_INT_COMPARE2:
         case NRF_DRV_RTC_INT_COMPARE3:
+        case NRF_DRV_RTC_INT_TICK:
 
             break;
         case NRF_DRV_RTC_INT_OVERFLOW:
             /* RTC overflow event */
-            rtc_overflow = (rtc_overflow != 255) ? (rtc_overflow + 1) : 0;
+            rtc_overflow++;
             break;
 
-        case NRF_DRV_RTC_INT_TICK:
-            /* RTC tick event */
-            rtc_count = (rtc_overflow << RTC_COUNTER_BITS) | nrf_drv_rtc_counter_get(&rtc_handle);
-            break;
 
         default:
             /* Unknown RTC event. Added for completeness */
@@ -263,13 +268,14 @@ const char* coines_get_version()
  * @brief Resets the device
  *
  * @note  After reset device jumps to the address specified in makefile (APP_START_ADDRESS).
+ *        The reset address can also be updated from the application.
  *
  * @return void
  */
 void coines_soft_reset(void)
 {
     memcpy((uint32_t *)MAGIC_LOCATION, "COIN", 4); /* *MAGIC_LOCATION = 0x4E494F43; // 'N','O','I','C' */
-    APP_START_ADDR = APP_START_ADDRESS; /* Application start address; */
+    APP_START_ADDR = app_start_address; /* Application start address; */
 
     NVIC_SystemReset();
 }
@@ -286,13 +292,16 @@ int16_t coines_get_board_info(struct coines_board_info *data)
         data->board = 5;
 #elif defined(MCU_APP31)
         data->board = 9;
+#elif defined(MCU_HEAR3X)
+        data->board = 10;
 #else
         data->board = 0xFE;
 #endif
         data->hardware_id = 0x11;
-        data->shuttle_id = get_shuttle_id();
+        
         data->software_id = 0x10;
 #if (defined(MCU_APP30)||defined(MCU_APP31))
+        data->shuttle_id = get_shuttle_id();
         if (app30_eeprom_romid(data->eeprom_id))
         {
             return COINES_SUCCESS;
@@ -301,7 +310,8 @@ int16_t coines_get_board_info(struct coines_board_info *data)
         {
             return COINES_E_FAILURE;
         }
-#else
+#else /*(MCU_HEAR3X)*/
+        data->shuttle_id = 0;
         return COINES_SUCCESS;
 #endif
     }
@@ -394,9 +404,9 @@ void usbd_user_ev_handler(app_usbd_event_type_t event)
  * @param[in]   : None
  * @return      : counter(RTC) reference time in usec
  * */
-uint32_t coines_get_realtime_usec(void)
+uint64_t coines_get_realtime_usec(void)
 {
-    return (uint32_t)RTC_TICKS_TO_USEC(rtc_count);
+    return RTC_TICKS_TO_USEC(get_rtc_ticks());
 }
 
 /*!
@@ -408,15 +418,9 @@ uint32_t coines_get_realtime_usec(void)
  */
 void coines_delay_realtime_usec(uint32_t period)
 {
-    uint32_t tick_count;
-    uint32_t num_ticks;
+    uint64_t end_time = coines_get_realtime_usec() + period;
 
-    /*lint -e653 -e524 */
-    num_ticks = (period < RTC_RESOLUTION_USEC) ? 1 : (uint32_t)roundf(((float)period / RTC_RESOLUTION_USEC));
-
-    tick_count = ((rtc_overflow << RTC_COUNTER_BITS) | nrf_drv_rtc_counter_get(&rtc_handle));
-
-    while ((((rtc_overflow << RTC_COUNTER_BITS) | nrf_drv_rtc_counter_get(&rtc_handle)) - tick_count) < num_ticks)
+    while (coines_get_realtime_usec() < end_time)
         ;
 }
 
@@ -427,8 +431,9 @@ uint32_t rtc_config(void)
 {
     uint32_t err_code;
 
-    /*lint -e1786 -e778 */
+    /*lint -e1786 -e778 -e785*/
     nrfx_rtc_config_t rtc_config_struct = NRFX_RTC_DEFAULT_CONFIG;
+    /*lint +e1786 +e778 +e785*/
 
     /* Configure the prescaler to generate ticks for a specific time unit */
     /* if prescalar = 1, tick resolution =  32768 / (1 + 1) = 16384Hz = 61.035us */
@@ -438,9 +443,6 @@ uint32_t rtc_config(void)
     err_code = nrfx_rtc_init(&rtc_handle, &rtc_config_struct, rtc_handler);
     if (err_code == NRFX_SUCCESS)
     {
-        /* Generate a tick event on each tick */
-        nrfx_rtc_tick_enable(&rtc_handle, true);
-
         nrfx_rtc_overflow_enable(&rtc_handle, true);
 
         /* start the RTC */
@@ -849,6 +851,21 @@ static void gpiohandler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
             break;
         }
     }
+}
+
+
+/*!
+ *  @brief This API is used to execute the function inside critical region.
+ */
+void coines_execute_critical_region(coines_critical_callback callback)
+{
+    CRITICAL_REGION_ENTER();
+    if (callback)
+    {
+        callback();
+    }
+
+    CRITICAL_REGION_EXIT();
 }
 
 /** @}*/

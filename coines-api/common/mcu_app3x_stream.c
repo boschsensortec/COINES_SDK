@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -333,7 +333,7 @@ int16_t coines_start_stop_streaming(enum coines_streaming_mode mode, uint8_t sta
 
     stream_mode = mode;
 
-    if (start_stop == COINES_STREAMING_START)
+    if (start_stop == COINES_USB_STREAMING_START)
     {
         stream_start();
     }

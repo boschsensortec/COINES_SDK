@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -36,7 +36,7 @@
 
 /*! \mainpage Introduction
  *
- * - COINES_SDK provides a low-level interface to Bosch Sensortec's application board APP2.0.
+ * - COINES_SDK provides a low-level interface to Bosch Sensortec's application board APP3.X.
  * - The user can access Bosch Sensortec's MEMS sensors using the SensorAPI through a C
  *   and a python interface, compile, modify and test sample applications.
  * - COINES_SDK can be used to see how to use the SensorAPI in an embedded environment,
@@ -479,20 +479,20 @@ int8_t coines_read_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint8_t reg_ad
  *  @brief This API is used to write the data in SPI communication.
  *
  */
-int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
 {
     (void)bus;
 
-    return (int8_t)coines_write(COINES_SENSOR_INTF_SPI, dev_addr, 0, reg_addr, reg_data, count);
+    return (int8_t)coines_write(COINES_SENSOR_INTF_SPI, cs_pin, 0, reg_addr, reg_data, count);
 }
 
 /*!
  *  @brief This API is used to write the data in SPI communication.
  *
  */
-int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_addr, void *reg_data, uint16_t count)
+int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits)
 {
-    return (int8_t)coines_write_16bit(bus, cs, reg_addr, reg_data, count);
+    return (int8_t)coines_write_16bit(bus, cs_pin, reg_addr, reg_data, count);
 }
 
 /*********************************************************************/
@@ -501,20 +501,20 @@ int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_
  *  @brief This API is used to read the data in SPI communication.
  *
  */
-int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
 {
     (void)bus;
 
-    return (int8_t)coines_read(COINES_SENSOR_INTF_SPI, dev_addr, 0, reg_addr, reg_data, count);
+    return (int8_t)coines_read(COINES_SENSOR_INTF_SPI, cs_pin, 0, reg_addr, reg_data, count);
 }
 
 /*!
  *  @brief This API is used to read the data in SPI communication.
  *
  */
-int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs, uint16_t reg_addr, void *reg_data, uint16_t count)
+int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits)
 {
-    return (int8_t)coines_read_16bit(bus, cs, reg_addr, reg_data, count);
+    return (int8_t)coines_read_16bit(bus, cs_pin, reg_addr, reg_data, count);
 }
 
 /*********************************************************************/
@@ -806,7 +806,7 @@ int16_t coines_trigger_timer(enum coines_timer_config tmr_cfg, enum coines_time_
  *
  * @return Result of API execution status
  */
-
+/*lint -e528 */ 
 static int16_t coines_read_16bit(enum coines_spi_bus bus,
                                  uint8_t cs_pin,
                                  uint16_t reg_addr,
@@ -1160,6 +1160,7 @@ static int16_t coines_read(enum coines_sensor_intf intf,
  *
  * @return Result of API execution status
  */
+/*lint -e528 */
 static int16_t coines_write_16bit(enum coines_spi_bus bus,
                                   uint8_t cs_pin,
                                   uint16_t reg_addr,
@@ -1712,7 +1713,7 @@ static int16_t coines_third_party_write(enum coines_sensor_intf intf,
  * @param[in]   : None
  * @return      : counter(RTC) reference time in usec
  * */
-uint32_t coines_get_realtime_usec(void)
+uint64_t coines_get_realtime_usec(void)
 {
     /* TODO */
     return 0;

@@ -27,7 +27,7 @@ $ pip install -r requirements.txt
 C:\Tools> python ble-nus-term.py -l
 
 Application Board 3.0 BLE NUS tool
-Bosch Sensortec GmbH (C) 2024
+Bosch Sensortec GmbH (C) 2025
 
 Scanning for devices...
 APP3.0 Board (NUS)        D7:A3:CE:8E:36:14      -56 dB
@@ -46,7 +46,7 @@ Download a BLE enabled COINES example before running the following command:
 ```
 C:\Tools> python ble-nus-term.py -d D7:A3:CE:8E:36:14
 Application Board 3.0 BLE NUS Terminal
-Bosch Sensortec GmbH (C) 2024
+Bosch Sensortec GmbH (C) 2025
 
 Connected to D7:A3:CE:8E:36:14
 
@@ -64,7 +64,7 @@ t[s]:0.0406     data[m/s2]: ax:3.0933   ay:1.8771       az:8.8873
 ```
 C:\tools> python ble-nus-term.py -h
 Application Board 3.0 BLE NUS Terminal
-Bosch Sensortec GmbH (C) 2024
+Bosch Sensortec GmbH (C) 2025
 
 use: ble-nus-term.py [-h] [-l] [-d DEVICE_MAC_ADDR]
 

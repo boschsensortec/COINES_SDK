@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -896,7 +896,7 @@ int8_t coines_i2c_get(enum coines_i2c_bus bus, uint8_t dev_addr, uint8_t *data, 
 /*!
  *  @brief This API is used to write the data in SPI communication.
  */
-int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
 {
     nrfx_err_t error;
 
@@ -904,7 +904,7 @@ int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_a
     {
         if (coines_is_spi_enabled(bus))
         {
-            uint32_t pin_num = multi_io_map[dev_addr];
+            uint32_t pin_num = multi_io_map[cs_pin];
             if (pin_num == 0 || pin_num == 0xff)
             {
                 return COINES_E_FAILURE;
@@ -974,7 +974,7 @@ int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_a
 /*!
  *  @brief This API is used to read the data in SPI communication.
  */
-int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
+int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr, uint8_t *reg_data, uint16_t count)
 {
     nrfx_err_t error;
 
@@ -982,7 +982,7 @@ int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t dev_addr, uint8_t reg_ad
     {
         if (coines_is_spi_enabled(bus))
         {
-            uint32_t pin_num = multi_io_map[dev_addr];
+            uint32_t pin_num = multi_io_map[cs_pin];
             if (pin_num == 0 || pin_num == 0xff)
             {
                 return COINES_E_FAILURE;

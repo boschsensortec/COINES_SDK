@@ -84,6 +84,13 @@ SECTIONS
         *(.rodata*)
 
         KEEP(*(.eh_frame*))
+        __bst_app_start = ABSOLUTE(.);
+        KEEP (*(.internal_app_init) );
+        __bst_app_end = ABSOLUTE(.);
+        __usr_app_start = ABSOLUTE(.);
+        KEEP (*(.user_app_init) ) ;
+        __usr_app_end = ABSOLUTE(.);    
+
     } > FLASH
 
     .sdh_soc_observers :

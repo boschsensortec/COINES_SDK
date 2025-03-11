@@ -53,7 +53,17 @@ either expressed or implied, of the FLogFS Project.
 #define FS_SECTOR_SIZE       (512)
 #define FS_SECTORS_PER_PAGE  (4)
 #define FS_PAGES_PER_BLOCK   (64)
-#define FS_NUM_BLOCKS        (2008) //Total no of blocks available in w25m02gw/w25n02jw variant is 2048 in which 40 blocks are reserved
+
+#define W25N02_FS_NUM_BLOCKS        (2008)
+#define W25N01_FS_NUM_BLOCKS        (1004)
+
+#if defined(MCU_HEAR3X)
+#define FS_NUM_BLOCKS        W25N01_FS_NUM_BLOCKS
+#else
+#define FS_NUM_BLOCKS        W25N02_FS_NUM_BLOCKS
+#endif
+
+//Total no of blocks available in w25m02gw/w25n02jw variant is 2048 in which 40 blocks are reserved
 //! @}
 
 #define FS_SECTORS_PER_BLOCK (FS_SECTORS_PER_PAGE * FS_PAGES_PER_BLOCK)

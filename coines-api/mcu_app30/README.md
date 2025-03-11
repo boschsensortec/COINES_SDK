@@ -45,5 +45,3 @@ To switch to bootloader or MTP mode:
  - 2400 baud for MTP mode
  
 2. See the `app_switch` tool for more details.
-
-It's permitted to use APP2.0 pins in code intended for APP3.0 provided the shuttle EEPROM is loaded with APP2.0-APP3.0 pin mappings.

@@ -36,7 +36,7 @@ To run examples on the Application Board microcontroller, follow these steps:
   * Red Hat-based distros: Run `sudo yum instal dfu-util`
 * macOS: Run `brew install dfu-util`
 3. Get the [GNU Arm Embedded Toolchain](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads), extract and add to the PATH.
-4. Go to any example and run `make TARGET=MCU_APP20 download` (or) `make TARGET=MCU_APP30 download` (or) `make TARGET=MCU_APP31 download.
+4. Go to any example and run `make TARGET=MCU_APP30 download` (or) `make TARGET=MCU_APP31 download`.
 5. Open the Application Board USB serial port with any serial terminal program (Ensure DTR signal is asserted).
 
 ## Running Python examples
@@ -59,5 +59,5 @@ To run Python examples, follow these steps:
 ## Creating new examples
 
 To create new examples, follow these steps:
-1. Go to the `examples/c/template` folder.
+1. Go to the `examples/c/common/template` folder.
 2. Review the `Makefile` in this directory. This file contains instructions for compiling and linking the C, Assembly, C++ files, and binary libraries. Use it as a reference when adding your own files.

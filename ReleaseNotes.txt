@@ -1,3 +1,30 @@
+COINES_SDK v2.10 - (20-11-2024)
+
+Updates
+* Added DMA streaming support for BMI4(FPGA testing).
+* Added external flash logging support.
+* Refactored Coines PC
+  - Layered architecture to enhance clarity and future scalability.
+  - Supports streaming data at 1600HZ without dataloss.
+  - Supports read and write operation during streaming.
+* APP3.1 MTP support
+  - Resolved issues with the APP3.1 MTP format functionality.
+  - Enhanced the external flash driver by adding BBM (Bad Block Management) support.​
+* Added support for the combination shuttle board in APP3.1.
+* Fixed the issue where reconfiguring the same VDD was being requested in APP3.1
+* Linked pthread for 32-bit Windows to fix Win32 thread model issues.
+* Added support for 16-bit Read/Write operations in I2C and SPI communication interfaces for APP3.X.
+* Fixed the issue where reconfiguring the same VDD was being requested in APP3.1 
+* Fixed detection of nicla hardware in coines bridge pc
+* Removed all unnecessary delays in the PMIC library.
+* Removed APP2.0 support from COINES SDK
+* Added FIFO streaming support using interrupt streaming in Coines Bridge.
+
+Known Limitations 
+* In PC target APP3.X ,can only read up to 3KB
+* In PC target, the COINES bridge library has not been tested on 32-bit macOS environments because macOS versions starting with Catalina no longer support 32-bit applications or libraries.
+  
+
 COINES_SDK v2.9 - (05-03-2024)
 
 Updates

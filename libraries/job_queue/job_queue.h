@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -45,13 +45,19 @@
 extern "C" {
 #endif
 
-#define JOB_QUEUE_SUCCESS               0
+#define JOB_QUEUE_MAX_EXECUTE_COUNT      2
+
+#define JOB_QUEUE_SUCCESS                0
 #define JOB_QUEUE_EMPTY                 -1
 #define JOB_QUEUE_FULL                  -2
 #define JOB_QUEUE_UNKNOWN_JOB_CALLBACK  -3
 #define JOB_QUEUE_INVALID_STATE         -4
 
+#if defined(MCU_APP31)
+#define JOB_QUEUE_DEPTH                 250
+#else
 #define JOB_QUEUE_DEPTH                 20
+#endif
 #define JOB_QUEUE_DATA_SIZE             20
 
 /**

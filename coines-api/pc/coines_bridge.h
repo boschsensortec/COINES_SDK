@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2024 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -66,7 +66,7 @@ extern "C" {
 #define COINES_PROTO_REG_START_ADDR_POS        (13)
 #define COINES_PROTO_REG_DATA_BYTES_LEN_POS    (23)
 
-#define COINES_STREAM_CONFIG_BUFF_SIZE         (50)
+#define COINES_STREAM_CONFIG_BUFF_SIZE         (100)
 #define COINES_POLL_STREAM_COMMON_PAYLOAD_LEN  (4)
 
 /**********************************************************************************/
@@ -108,6 +108,7 @@ enum coines_cmds {
     COINES_CMD_ID_SOFT_RESET,
     COINES_CMD_ID_SHUTTLE_EEPROM_WRITE,
     COINES_CMD_ID_SHUTTLE_EEPROM_READ,
+    COINES_CMD_ID_DMA_INT_STREAM_CONFIG,
     COINES_N_CMDS
 };
 
@@ -118,6 +119,7 @@ struct coines_stream_sensor_info
 {
     uint16_t no_of_sensors_enabled; /**< Number of sensors enabled */
     uint16_t sensors_byte_count[COINES_MAX_SENSOR_COUNT]; /**< Sensor byte count */
+    enum coines_streaming_mode stream_mode;
 };
 
 /*!
