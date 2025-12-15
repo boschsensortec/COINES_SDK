@@ -2,7 +2,7 @@ CROSS_COMPILE = arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 AR = $(CROSS_COMPILE)ar
 
-CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -c -Os -g -Wall
+CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -c -Os -g -Wall -Wuninitialized
 CFLAGS += -ffunction-sections -fdata-sections
 
 CFLAGS += -DNRF52840_XXAA -D__HEAP_SIZE=8192 -D__STACK_SIZE=8192 -DSWI_DISABLE0 -DUSE_APP_CONFIG
@@ -13,10 +13,13 @@ ifeq ($(PRE_CHARGE_EN),1)
 	CFLAGS += -DPRE_CHARGE_EN
 endif
 
-nRF5_SDK_DIR = ../../thirdparty/nRF5_SDK
-THIRD_PARTY_DIR=../../thirdparty
-LIB_DIR=../../libraries
-COMMON=../common
+nRF5_SDK_DIR ?= ../../thirdparty/nRF5_SDK
+THIRD_PARTY_DIR?=../../thirdparty
+LIB_DIR?=../../libraries
+COMMON?=../common
+COINES_API_DIR?=..
+
+FREERTOS_PATH = $(nRF5_SDK_DIR)/external/freertos
 ASM_SRCS_COINES = $(nRF5_SDK_DIR)/modules/nrfx/mdk/gcc_startup_nrf52840.S \
 
 C_SRCS_COINES += \
@@ -25,7 +28,7 @@ $(COMMON)/mcu_app3x_support.c \
 $(COMMON)/mcu_app3x_interface.c \
 $(COMMON)/mcu_app3x.c \
 $(COMMON)/mcu_app3x_stream.c \
-$(COMMON)/mcu_app3x_interface_spi_nb.c \
+$(COMMON)/mcu_app3x_interface_nb.c \
 $(THIRD_PARTY_DIR)/ds28e05/ds28e05.c \
 $(LIB_DIR)/w25_common/w25_common.c \
 $(LIB_DIR)/w25m02gw/w25m02gw.c \
@@ -87,7 +90,6 @@ $(nRF5_SDK_DIR)/components/ble/common/ble_srv_common.c \
 $(nRF5_SDK_DIR)/components/ble/common/ble_conn_params.c \
 $(nRF5_SDK_DIR)/components/libraries/atomic_flags/nrf_atflags.c \
 $(nRF5_SDK_DIR)/components/ble/nrf_ble_qwr/nrf_ble_qwr.c \
-$(nRF5_SDK_DIR)/components/libraries/timer/app_timer.c \
 $(nRF5_SDK_DIR)/components/ble/ble_advertising/ble_advertising.c \
 $(nRF5_SDK_DIR)/components/libraries/ringbuf/nrf_ringbuf.c \
 $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/nrfx_power_clock.c \
@@ -95,10 +97,37 @@ $(nRF5_SDK_DIR)/components/drivers_nrf/usbd/nrf_drv_usbd.c \
 $(nRF5_SDK_DIR)/components/libraries/crc16/crc16.c
 
 
+ifeq ($(USE_FREERTOS),$(filter $(USE_FREERTOS),1))
+	ifeq ($(USE_RTC_CLOCK),$(filter $(USE_RTC_CLOCK),1))
+		C_SRCS_COINES +=\
+		$(nRF5_SDK_DIR)/components/libraries/timer/app_timer_freertos.c
+	else
+		C_SRCS_COINES +=\
+		$(nRF5_SDK_DIR)/components/libraries/timer/app_timer.c
+	endif
+
+	C_SRCS_COINES +=\
+    $(FREERTOS_PATH)/source/portable/MemMang/heap_4.c\
+	$(FREERTOS_PATH)/source/croutine.c\
+	$(FREERTOS_PATH)/source/event_groups.c\
+	$(FREERTOS_PATH)/source/list.c\
+	$(FREERTOS_PATH)/source/queue.c\
+	$(FREERTOS_PATH)/source/stream_buffer.c\
+	$(FREERTOS_PATH)/source/tasks.c\
+	$(FREERTOS_PATH)/source/timers.c\
+    $(FREERTOS_PATH)/portable/GCC/nrf52/port.c\
+    $(FREERTOS_PATH)/portable/CMSIS/nrf52/port_cmsis.c\
+    $(FREERTOS_PATH)/portable/CMSIS/nrf52/port_cmsis_systick.c
+else
+	C_SRCS_COINES +=\
+	$(nRF5_SDK_DIR)/components/libraries/timer/app_timer.c
+endif
+
+
 INCLUDEPATHS_COINES += \
-.. \
-. \
-conf \
+$(COMMON) \
+$(COINES_API_DIR)/mcu_hear3x \
+$(COINES_API_DIR)/mcu_hear3x/conf \
 $(THIRD_PARTY_DIR)/ds28e05 \
 $(LIB_DIR)/nrf52_eeprom \
 $(LIB_DIR)/w25_common \
@@ -161,3 +190,11 @@ $(nRF5_SDK_DIR)/components/ble/ble_advertising \
 $(nRF5_SDK_DIR)/components/libraries/ringbuf \
 $(nRF5_SDK_DIR)/components/libraries/crc16
 
+ifeq ($(USE_FREERTOS),$(filter $(USE_FREERTOS),1)) 
+INCLUDEPATHS_COINES += \
+$(FREERTOS_PATH)/source \
+$(FREERTOS_PATH)/source/include \
+$(FREERTOS_PATH)/portable/GCC/nrf52 \
+$(FREERTOS_PATH)/CMSIS/nrf52 \
+$(FREERTOS_PATH)/portable/CMSIS/nrf52
+endif

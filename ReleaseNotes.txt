@@ -1,3 +1,41 @@
+COINES_SDK v2.12 - (01-12-2025)
+
+Updates
+* Important Notes
+    - It is mandatory to update all the latest firmware available in this package.
+    - Back up any logs stored in external flash if needed. After updating to the latest firmware, previously saved files cannot be retrieved because the MTP filename length has been increased from 40 to 150 characters. As a result, the old metadata format no longer aligns with the new structure.(Optional)
+    - Navigate to COINES_SDK\v2.x.x\firmware\target and run prepare_target.bat. All firmware updates should complete successfully (Mandatory).
+    - Put the application board into MTP mode and initiate a format operation (Mandatory).
+    - Restore backed-up files if needed (Optional)
+* APP3.1 and nicla reports accurate battery percentage readings, ensuring better monitoring and reliability.
+* Updated PMIC library by properly initializing variables, improving stability and preventing potential undefined behavior.
+* Added wait timeouts for both VDD and VDDIO rails, ensuring sufficient stabilization before dependent operations are executed.
+* Refined the LED status logic to indicate battery charging states before a USB or BLE connection is established.
+    - Charge Complete → White (Red, Green, and Blue ON)
+    - Charging → Magenta (Red & Blue ON, Green OFF)
+    - Anything else → Red
+* Versioning has been updated to allow greater flexibility. Previously, only 4 bits each were used for MAJOR, MINOR, and PATCH versions (limiting values to 0–15). To 
+  accommodate future growth as the COINES minor version approached this limit, the format now uses 4 bits for MAJOR and 6 bits each for MINOR and PATCH.
+* Added a new enum for fixed SPI speeds supported on APP3.0, APP3.1, and Nicla boards.
+* MTP firmware now sends a zero-length packet (ZLP) when the total file size is an exact multiple of the USB endpoint size, preventing host timeouts and device unreachability issues.
+* The maximum allowed MTP file name length has been increased from 40 to 150 characters.
+* The PC target now supports interface read and write operations up to 12 KB.
+* Added a generic SPI transfer API (coines_spi_transfer) that supports independent read/write buffers with configurable lengths. This interface allows issuing any SPI command type,
+  with support for NULL buffers when read or write is not required.
+
+Known Limitations 
+* BLE 
+    - In the COINES bridge firmware, the BLE interface is disabled when USB streaming starts and re-enabled once the streaming stops.
+    - In PC mode, frequent connecting and disconnecting may cause the device to not appear in the scan list.
+* MTP
+    - The mtp_switch tool does not support selecting a specific board when multiple MTP devices are connected.
+    - No popup appears when storage is full or when copying more than the maximum supported files (128)
+    - Renaming files not supported
+    - No support for directories, file timestamps
+    - File name, including the extension is limited to 150 characters
+    - When multiple files exist on the device (for example, 10 files), deleting one file (such as the 5th file) does not cause the host to issue a new GetObjectHandles request.
+      As a result, if the same file is copied again, Explorer does not refresh its file list, and the newly copied file may not appear until the device is power-cycled or re-enumerated.
+
 COINES_SDK v2.11 - (09-07-2025)
 
 Updates

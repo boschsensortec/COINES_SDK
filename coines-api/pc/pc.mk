@@ -8,7 +8,7 @@ endif
 
 CC     = gcc
 
-CFLAGS += -std=c99 -D$(PLATFORM) -c -O0 -g -Wall -D$(DRIVER)
+CFLAGS += -std=c99 -D$(PLATFORM) -c -O0 -g -Wall -Wextra -Wuninitialized -D$(DRIVER)
 
 ifeq ($(COINES_BACKEND),COINES_BRIDGE)
     C_SRCS_COINES += \

@@ -83,6 +83,7 @@ static int8_t null_ptr_check(const struct bq_dev *dev);
         4.2	        100	     100	  20
 */
 uint8_t bat_soc_table[21] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 20, 35, 50, 65, 80, 95, 100, 100};
+uint16_t bat_volt_table[21] = { 2520, 2604, 2688, 2772, 2856, 2940, 3024, 3108, 3192, 3276, 3360, 3444, 3528, 3612, 3696, 3780, 3864, 3948, 4032, 4116, 4200 };
 #define Align(x)    ((x) - 60) / 2
 /****************** Global Function Definitions *******************************/
 
@@ -94,11 +95,11 @@ int8_t bq_init(struct bq_dev *dev)
 {
     int8_t rslt;
     uint8_t read_data = 0;
-	struct bq_ilim_bat_uvlo ilim_cfg;
-	struct bq_term_precharge_config prechrg_cfg;
-	struct bq_fast_charge_config fastchrg_cfg;
-    struct bq_load_switch ldo_cfg;
-    struct bq_push_btn pushbtn_cfg;
+	struct bq_ilim_bat_uvlo ilim_cfg = {0};
+	struct bq_term_precharge_config prechrg_cfg = {0};
+	struct bq_fast_charge_config fastchrg_cfg = {0};
+    struct bq_load_switch ldo_cfg = {0};
+    struct bq_push_btn pushbtn_cfg = {0};
     struct ts_flt_mask_config tscfg = {0, 0, 0, 0, 0};
     struct fault_mask_reg fault_cfg = {0, 0, 0, 0};
     uint8_t batvoltage = 0;
@@ -119,7 +120,7 @@ int8_t bq_init(struct bq_dev *dev)
             if (rslt == BQ_OK)
             {
                 /* Give time to driver to reset */
-                // rslt = bq_delay_ms(dev,50);
+                rslt = bq_delay_ms(dev,50);
 				
                 // Set BQ normal operation mode:
                 rslt |= bq_set_mode_config(dev,BQ_NORMAL_OP_ENABLE);
@@ -129,7 +130,7 @@ int8_t bq_init(struct bq_dev *dev)
 				bq_set_battery_charge_volt(dev, batvoltage);
 
 				ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
-				ilim_cfg.batuvlo = BQ_BUVLO_2_4_V; //Discharge Cut-off Voltage
+				ilim_cfg.batuvlo = BQ_BUVLO_3_0_V; //Discharge Cut-off Voltage
 				rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
 
 				fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
@@ -140,7 +141,7 @@ int8_t bq_init(struct bq_dev *dev)
 
                 prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
 				prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA;//10% of Max charging current = 15mA
-				prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
+				prechrg_cfg.term_state = BQ_ITERM_DISABLE;
 				rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
 
                 ldo_cfg.enable = BQ_LOAD_LDO_DISABLE;
@@ -150,7 +151,7 @@ int8_t bq_init(struct bq_dev *dev)
 
                 pushbtn_cfg.wake1_timer = BQ_MR_W1_SUP_80_MS;
                 pushbtn_cfg.wake2_timer = BQ_MR_W2_SUP_1500_MS;
-                pushbtn_cfg.afterreset = BQ_MR_RESET_HI_Z_MODE;
+                pushbtn_cfg.afterreset = BQ_MR_RESET_SHIP_MODE;
 	            pushbtn_cfg.reset_timer = BQ_MR_RESET_5_S;
 	            pushbtn_cfg.output = BQ_MR_INT_OUTPUT_PG;
 	            rslt |= bq_set_push_button(dev, pushbtn_cfg);
@@ -336,9 +337,9 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
 {
     int8_t rslt;
     uint8_t registervalue = 0;
-    struct bq_fast_charge_config fastchrg_cfg;
-    struct bq_term_precharge_config prechrg_cfg;
-    struct bq_ilim_bat_uvlo ilim_cfg;
+    struct bq_fast_charge_config fastchrg_cfg = {0};
+    struct bq_term_precharge_config prechrg_cfg = {0};
+    struct bq_ilim_bat_uvlo ilim_cfg = {0};
     uint8_t cd_entry_state;
     /* Check for null pointer in the device structure */
     rslt = null_ptr_check(dev);
@@ -352,15 +353,15 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
         bq_cd_set(dev,1);
         // bq_delay_ms(dev,20);
 
-        /*Set Buvlo to 2,2V*/
+        /*Set Buvlo to 3,0V*/
         ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
-        ilim_cfg.batuvlo = BQ_BUVLO_2_2_V; //Discharge Cut-off Voltage
+        ilim_cfg.batuvlo = BQ_BUVLO_3_0_V; //Discharge Cut-off Voltage
         rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
 
         /*Disable IPREM/TERM Current*/
         prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
         prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA;//10% of Max charging current = 15mA
-        prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
+        prechrg_cfg.term_state = BQ_ITERM_DISABLE;
         rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
 
         /*Disable charge to show faults*/
@@ -383,17 +384,25 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
 			state->bat_ocp = (registervalue&0x10)>>4;
         }       
 
+#if PRE_CHARGE_EN
+        /*Enable IPREM/TERM Current*/
+        prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
+        prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA;//10% of Max charging current = 15mA
+        prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
+        rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
+#endif
+
+        /*Set Buvlo to 3,0V*/
+        ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
+        ilim_cfg.batuvlo = BQ_BUVLO_3_0_V; //Discharge Cut-off Voltage
+        rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
+
         /*Enable charge*/
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
         fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
         fastchrg_cfg.charger_state = BQ_CHARGER_ENABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);
-
-        /*Set Buvlo to 2,2V*/
-        ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
-        ilim_cfg.batuvlo = BQ_BUVLO_2_4_V; //Discharge Cut-off Voltage
-        rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
         
         // bq_delay_ms(dev,10);
         bq_cd_set(dev,cd_entry_state);
@@ -522,6 +531,7 @@ int8_t bq_set_sys_vout(struct bq_dev *dev, struct bq_sys_vout cfg)
     {
         configuration = cfg.enable | cfg.sys_select | cfg.code;
         rslt = bq_write_reg(BQ_SYS_VOUT_CTRL_REG,&configuration,1,dev);
+        bq_delay_ms(dev, 1); // Wait for the SYS VOUT to stabilize
     }
     else
     {
@@ -546,6 +556,7 @@ int8_t bq_set_load_ldo(struct bq_dev *dev, struct bq_load_switch cfg)
     {
         configuration = cfg.enable | cfg.code | cfg.reset;
         rslt = bq_write_reg(BQ_LOAD_AND_LDO_CTRL_REG,&configuration,1,dev);
+        bq_delay_ms(dev, 1); // Wait for the LDO to stabilize
     }
     else
     {
@@ -698,10 +709,12 @@ int8_t bq_get_battery_voltage(struct bq_dev *dev, uint8_t *batvolt)
         cd_entry_state = dev->cd_pin_state; //Save CD initial state
 
         bq_cd_set(dev,1); //Push CD high to get an accurate reading of the battery voltage
-        // bq_delay_ms(dev,20);
         
         rslt = bq_write_reg(BQ_VOLT_BASED_BATT_MONITOR_REG,&sendupdate,1,dev);
-        // bq_delay_ms(dev,2);
+        /* Voltage Based Battery Monitor - After initiating VBMON_READ, wait 2ms before 
+        * reading the register for VBMON voltage and threshold fields.
+        */
+        bq_delay_ms(dev,2);
         /* Check for arguments validity */
         if (rslt == BQ_OK)
         {
@@ -813,6 +826,42 @@ int8_t bq_get_battery_soc(struct bq_dev *dev, uint8_t *batsoc)
 }
 
 /*!
+ * @brief This API is used read the current battery voltage [mV] and charge [%]
+ */
+int8_t bq_get_battery_status(struct bq_dev *dev, uint16_t *bat_mv, uint8_t *bat_soc)
+{
+    int8_t rslt;
+    uint8_t readdata = 0;
+    /* Check for null pointer in the device structure */
+    rslt = null_ptr_check(dev);
+
+    /* Check for arguments validity */
+    if (rslt == BQ_OK)
+    {
+        rslt = bq_get_battery_voltage(dev, &readdata);
+        if (rslt == BQ_OK)
+        {
+            if(readdata == 60)
+            {
+                *bat_soc = 0;
+                *bat_mv = 0;
+            }
+            else
+            {
+                *bat_soc = bat_soc_table[Align(readdata)];
+                *bat_mv = bat_volt_table[Align(readdata)];
+            }
+        }
+    }
+    else
+    {
+        rslt = BQ_NULL_PTR;
+    }
+    
+    return rslt; 
+}
+
+/*!
  * @brief This API is used to set the VINDPM threshold and timers configuration.
  */
 int8_t bq_set_vin_dpm_timer(struct bq_dev *dev, struct bq_vim_and_timers cfg)
@@ -842,10 +891,10 @@ int8_t bq_set_vin_dpm_timer(struct bq_dev *dev, struct bq_vim_and_timers cfg)
 int8_t bq_charge_enable(struct bq_dev *dev)
 {
     int8_t rslt;
-    struct bq_fast_charge_config fastchrg_cfg;
-    struct bq_ilim_bat_uvlo ilim_cfg;
-    struct fault_mask_reg faults;
-    struct bq_term_precharge_config prechrg_cfg;
+    struct bq_fast_charge_config fastchrg_cfg = {0};
+    struct bq_ilim_bat_uvlo ilim_cfg = {0};
+    struct fault_mask_reg faults = {0};
+    struct bq_term_precharge_config prechrg_cfg = {0};
 
     /* Check for null pointer in the device structure */
     rslt = null_ptr_check(dev);
@@ -857,16 +906,16 @@ int8_t bq_charge_enable(struct bq_dev *dev)
         bq_cd_set(dev,1);
         // bq_delay_ms(dev,20);
 
-        /*Set Buvlo to 2,2V*/
+        /*Set Buvlo to 3,0V*/
         ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
-        ilim_cfg.batuvlo = BQ_BUVLO_2_2_V; //Discharge Cut-off Voltage
+        ilim_cfg.batuvlo = BQ_BUVLO_3_0_V; //Discharge Cut-off Voltage
         rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
         //// bq_delay_ms(dev,20);
 
         /*Disable IPREM/TERM Current*/
         prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
         prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA;//10% of Max charging current = 15mA
-        prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
+        prechrg_cfg.term_state = BQ_ITERM_DISABLE;
         rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
 
         /*Disable charge Bit*/
@@ -885,9 +934,9 @@ int8_t bq_charge_enable(struct bq_dev *dev)
             /*Disable IPREM/TERM Current*/
             prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
             prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA;//10% of Max charging current = 15mA
-            prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
+            prechrg_cfg.term_state = BQ_ITERM_DISABLE;
             rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
-#ifdef PRE_CHARGE_EN
+#if PRE_CHARGE_EN
             dev->battery_connected = 0;
 #endif
         }
@@ -898,14 +947,14 @@ int8_t bq_charge_enable(struct bq_dev *dev)
             prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA;//10% of Max charging current = 15mA
             prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
             rslt |= bq_set_term_precharge_current(dev, prechrg_cfg);
-#ifdef PRE_CHARGE_EN
+#if PRE_CHARGE_EN
             dev->battery_connected = 1;
 #endif
         }
 
-        /*Set Buvlo to defaul 2,4V*/
+        /*Set Buvlo to defaul 3,0V*/
         ilim_cfg.ilimcode = BQ_INLIM_200_MA; 
-        ilim_cfg.batuvlo = BQ_BUVLO_2_4_V; //Discharge Cut-off Voltage
+        ilim_cfg.batuvlo = BQ_BUVLO_3_0_V; //Discharge Cut-off Voltage
         rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);    
 
         /*Enable charge bit*/       
@@ -952,8 +1001,8 @@ int8_t bq_charge_enable(struct bq_dev *dev)
 int8_t bq_charge_disable(struct bq_dev *dev)
 {
     int8_t rslt;
-    struct bq_fast_charge_config fastchrg_cfg;
-    struct bq_term_precharge_config prechrg_cfg;
+    struct bq_fast_charge_config fastchrg_cfg = {0};
+    struct bq_term_precharge_config prechrg_cfg = {0};
     /* Check for null pointer in the device structure */
     rslt = null_ptr_check(dev);
 
@@ -977,7 +1026,7 @@ int8_t bq_charge_disable(struct bq_dev *dev)
         bq_cd_set(dev,1);
         // bq_delay_ms(dev,20);
 
-#ifdef PRE_CHARGE_EN
+#if PRE_CHARGE_EN
         dev->battery_connected = 1;
 #endif
     }

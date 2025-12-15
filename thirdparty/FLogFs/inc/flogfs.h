@@ -57,7 +57,7 @@ either expressed or implied, of the FLogFS Project.
 //! Some compilation options to customize the build
 //! @{
 //! The maximum file name length allowed
-#define FLOG_MAX_FNAME_LEN (40)
+#define FLOG_MAX_FNAME_LEN (151)
 //! @}
 
 #include "flogfs_conf.h"

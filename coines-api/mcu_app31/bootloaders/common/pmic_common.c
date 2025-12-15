@@ -36,6 +36,7 @@
 /* system header includes */
 /**********************************************************************************/
 #include "pmic_common.h"
+#include "utils.h"
 
 /*GPIO interrupt default configuration*/
 static nrfx_gpiote_in_config_t gpio_config = NRFX_GPIOTE_RAW_CONFIG_IN_SENSE_LOTOHI(true);
@@ -189,6 +190,8 @@ void pmic_cyclic_reading(void)
     {
         pmic_check_battery_and_faults(&pmic_dev, &faults);
     }
+    utils_safe_wdt_feed();
+
 }
 
 /*!

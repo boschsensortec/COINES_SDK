@@ -322,6 +322,10 @@ static void nus_data_handler(ble_nus_evt_t *p_evt)
         }
         break;
     case BLE_NUS_EVT_TX_RDY:
+        if(service_init_info.data_tx_callback)
+        {
+            service_init_info.data_tx_callback();
+        }
         ble_tx_pending = false;
         break;
     case BLE_NUS_EVT_COMM_STARTED:
@@ -809,6 +813,7 @@ void ble_service_init(ble_service_init_t *init_handle)
     service_init_info.temp_read_callback = init_handle->temp_read_callback;
     service_init_info.batt_status_read_callback = init_handle->batt_status_read_callback;
     service_init_info.data_rx_callback = init_handle->data_rx_callback;
+    service_init_info.data_tx_callback = init_handle->data_tx_callback;
     service_init_info.adv_name = init_handle->adv_name;
     service_init_info.tx_power = init_handle->tx_power;
 

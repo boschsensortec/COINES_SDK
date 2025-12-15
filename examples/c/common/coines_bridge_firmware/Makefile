@@ -1,7 +1,7 @@
 # COINES Bridge version info
 COINES_BRIDGE_VERSION_MAJOR = 1
 COINES_BRIDGE_VERSION_MINOR = 8
-COINES_BRIDGE_VERSION_PATCH = 4
+COINES_BRIDGE_VERSION_PATCH = 6
 
 # Root of COINES_SDK installation folder
 # Can be C:/COINES/v2.0 , $(HOME)/COINES/v2.0 ,etc.,
@@ -41,7 +41,7 @@ INCLUDEPATHS += $(COINES_INSTALL_PATH)/libraries/circular_buffer_mcu
 INCLUDEPATHS += $(COINES_INSTALL_PATH)/examples/c/common/coines_bridge_firmware
 
 # Non stream request response buffer size
-DEFAULT_BUFF_SIZE ?= 2048
+DEFAULT_BUFF_SIZE ?= 12288
 # Stream response buffer size
 STREAM_BUFF_SIZE ?= 3072 
 

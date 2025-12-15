@@ -49,29 +49,12 @@ extern "C"
 /* header includes */
 /**********************************************************************************/
 #include "coines.h"
-#include "nrfx_spim.h"
 #include "nrf_gpio.h"
+#include "w25_common.h"
 /**********************************************************************************/
 /* macro definitions */
 /**********************************************************************************/
-/*! Write protect pin of w25n02kw chip */
-#define W25N02KW_WRITE_PROTECT_PIN   NRF_GPIO_PIN_MAP(0, 22)
-/*! Hold pin of w25n02kw chip */
-#define W25N02KW_HOLD_PIN           NRF_GPIO_PIN_MAP(0, 23)
-/*! Chip Select pin of w25n02kw chip */
-#define W25N02KW_CHIP_SEL_PIN       NRF_GPIO_PIN_MAP(0, 17)
 
-#define SPI_MOSI_PIN_FLASH                 NRF_GPIO_PIN_MAP(0, 20)
-#define SPI_MISO_PIN_FLASH                 NRF_GPIO_PIN_MAP(0, 21)
-#define SPI_CLK_PIN_FLASH                  NRF_GPIO_PIN_MAP(0, 19)
-#define SPI_CS_PIN_FLASH                   NRF_GPIO_PIN_MAP(0, 17)
-#define SPI_TX_SIZE  (256 + 1)
-
-extern const nrfx_spim_t flash_spi_instance;
-extern nrfx_spim_config_t flash_spi_config;
-static nrfx_spim_xfer_desc_t flash_spi_xfer;
-static uint8_t flash_spi_tx_buff[SPI_TX_SIZE];
-extern volatile bool spi_xfer_done;
 /**********************************************************************************/
 /* type definitions */
 /**********************************************************************************/
@@ -84,8 +67,7 @@ extern volatile bool spi_xfer_done;
 
 void w25n02kw_gpio_pin_output_set(uint8_t pin)
 {
-  nrf_gpio_cfg_output(pin);
-  nrf_gpio_pin_set(pin);
+   w25_gpio_pin_output_set(pin);
 }
 
 /*!
@@ -96,17 +78,7 @@ void w25n02kw_gpio_pin_output_set(uint8_t pin)
 
 uint8_t w25n02kw_spi_init()
 {
-    flash_spi_config.miso_pin = SPI_MISO_PIN_FLASH;
-    flash_spi_config.mosi_pin = SPI_MOSI_PIN_FLASH;
-    flash_spi_config.sck_pin = SPI_CLK_PIN_FLASH;
-    flash_spi_config.ss_pin = SPI_CS_PIN_FLASH;
-    flash_spi_config.frequency = NRF_SPIM_FREQ_8M;
-
-    if (nrfx_spim_init(&flash_spi_instance, &flash_spi_config, NULL, NULL) != NRFX_SUCCESS)
-    {
-        return 0;
-    }
-    return 1;
+    return w25_spi_init();
 }
 
 /*!
@@ -123,24 +95,7 @@ uint8_t w25n02kw_spi_init()
 
 uint8_t w25n02kw_spi_rx_tx(uint8_t spi_entity, uint8_t address, uint8_t* tx_buffer, uint16_t tx_count, uint8_t* rx_buffer, uint16_t rx_count)
 {
-	(void)spi_entity;
-    flash_spi_tx_buff[0] = address;
-    memcpy(&flash_spi_tx_buff[1], tx_buffer, tx_count);
-
-    flash_spi_xfer.p_tx_buffer = flash_spi_tx_buff;
-    flash_spi_xfer.tx_length = tx_count + 1;
-    flash_spi_xfer.p_rx_buffer = rx_buffer;
-    flash_spi_xfer.rx_length = rx_count;
-
-    spi_xfer_done = false;
-    nrfx_spim_xfer(&flash_spi_instance, &flash_spi_xfer, NRFX_SPIM_FLAG_TX_POSTINC|NRFX_SPIM_FLAG_RX_POSTINC|NRFX_SPIM_FLAG_REPEATED_XFER);
-
-    while (!spi_xfer_done)
-    {
-        coines_yield();
-    }
-    
-    return 0;
+    return w25_spi_rx_tx(spi_entity, address, tx_buffer, tx_count, rx_buffer, rx_count);
 }
 
 #ifdef __cplusplus

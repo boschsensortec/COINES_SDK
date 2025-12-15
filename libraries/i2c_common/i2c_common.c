@@ -48,13 +48,19 @@
 
 /*! Nicla I2C pins for BUS 0*/
 #define TWIM1_INSTANCE           1
-#define I2C_SDA_PIN        NRF_GPIO_PIN_MAP(0, 29) //Need to be updated since this is used by NICLA and AB3.1 bootloader and mtp, not using the same pins!
-#define I2C_SCL_PIN        NRF_GPIO_PIN_MAP(0, 26) //Need to be updated since this is used by NICLA and AB3.1 bootloader and mtp, not using the same pins!
+#ifdef MCU_HEAR3X_PMIC_CONTROL
+#define I2C_SDA_PIN        NRF_GPIO_PIN_MAP(0, 13) 
+#define I2C_SCL_PIN        NRF_GPIO_PIN_MAP(0, 14)
+#else /* APP3.1 and Nicla */
+#define I2C_SDA_PIN        NRF_GPIO_PIN_MAP(0, 29) 
+#define I2C_SCL_PIN        NRF_GPIO_PIN_MAP(0, 26) 
+#endif 
 
 /*! Macro definitions for I2C transaction status */
 #define I2C_TXRX_NONE       UINT8_C(0)
 #define I2C_TXRX_SUCCESS    UINT8_C(1)
 #define I2C_TXRX_FAILED     UINT8_C(2)
+
 
 /* Indicates if operation on I2C has completed. */
 static volatile uint8_t i2c_txrx_status = I2C_TXRX_FAILED;

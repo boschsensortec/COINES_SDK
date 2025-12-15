@@ -3685,6 +3685,11 @@
 
 // </e>
 
+/* Enable Watchdog driver */
+#ifndef WDT_ENABLED
+#define WDT_ENABLED 1
+#endif
+
 // </h> 
 //==========================================================
 

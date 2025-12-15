@@ -58,7 +58,7 @@
 /**********************************************************************************/
 #define USB_DFU_BL_ADDR        (0) /* It is actually not at 0x0 ! */
 #define APP30_MTP_FW_ADDR      (0x28000)
-#define APP31_MTP_FW_ADDR      (0xE3800)
+#define APP31_MTP_FW_ADDR      (0xE4000)
 #define HEAR3X_MTP_FW_ADDR     (0x28000)
 
 #define APP_SWITCH_FEATURE     (0x30)

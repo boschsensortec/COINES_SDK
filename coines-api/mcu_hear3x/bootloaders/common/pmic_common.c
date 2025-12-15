@@ -36,6 +36,7 @@
 /* system header includes */
 /**********************************************************************************/
 #include "pmic_common.h"
+#include "utils.h"
 
 /*GPIO interrupt default configuration*/
 static nrfx_gpiote_in_config_t gpio_config = NRFX_GPIOTE_RAW_CONFIG_IN_SENSE_LOTOHI(true);
@@ -189,6 +190,7 @@ void pmic_cyclic_reading(void)
     {
         pmic_check_battery_and_faults(&pmic_dev, &faults);
     }
+    utils_safe_wdt_feed();
 }
 
 /*!
@@ -208,12 +210,11 @@ void pmic_control_config(void)
     common_delay_ms(10);
 
 	/*Power_int and Vin_detect config*/
-	gpio_input_config();
+	// gpio_input_config();
 	
-	/*Check Vin presence*/
-	uint8_t pinvalue;
-	pinvalue = nrf_gpio_pin_read(VIN_DEC);
-    if (pinvalue == 0)
+	struct fault_mask_reg faults={0};
+    bq_get_faults(&pmic_dev, &faults);
+    if (faults.vin_uv == 1)
     {
         (void)bq_charge_disable(&pmic_dev);
         (void)bq_cd_set(&pmic_dev, 0);
@@ -222,7 +223,7 @@ void pmic_control_config(void)
         common_delay_ms(10);
         
     }
-    else
+    else if (faults.vin_uv == 0)
     {
 		(void)bq_charge_enable(&pmic_dev);
     }

@@ -102,7 +102,7 @@ static const nrfx_twim_config_t i2c_internal_pin_config = {
     .interrupt_priority = (uint8_t)APP_IRQ_PRIORITY_HIGH, .hold_bus_uninit = false
 };
 
-static coines_i2c_intf_t coines_i2c_intf[COINES_I2C_BUS_MAX] = {
+coines_i2c_intf_t coines_i2c_intf[COINES_I2C_BUS_MAX] = {
     /* COINES_I2C_BUS_0 - TWI0 PRIMARY PINS */
     { .instance = TWIM0_INSTANCE, .peripheral_instance = NRFX_TWIM0_INSTANCE, .enabled = false,
       .txrx_status = COINES_I2C_TX_FAILED, .config = i2c_primary_pin_config,
@@ -159,17 +159,22 @@ coines_spi_intf_t coines_spi_intf[COINES_SPI_BUS_MAX] = {
       .config = spi_internal_pin_config,
       .txrx_desc = { .p_tx_buffer = NULL, .tx_length = 0, .p_rx_buffer = NULL, .rx_length = 0 } }
 };
+/**********************************************************************************/
+/* Prototypes */
+/**********************************************************************************/
 
+/** @brief Callback function invoked when an I2C bus transaction is completed. */
+__attribute__((weak)) void coines_i2c_bus_transaction_complete_callback(enum coines_i2c_bus bus, bool status);
 /**********************************************************************************/
 /* Functions */
 /**********************************************************************************/
-
 /*!
  * @brief   This function manages the I2C0 event call back
  */
 static void coines_i2c0_event_handler(nrfx_twim_evt_t const *p_event, void *p_context)
 {
     (void)p_context;
+    coines_i2c_bus_transaction_complete_callback(COINES_I2C_BUS_0 , (p_event->type == NRFX_TWIM_EVT_DONE) ? true : false );
     switch (p_event->type)
     {
         case NRFX_TWIM_EVT_DONE:
@@ -187,6 +192,7 @@ static void coines_i2c0_event_handler(nrfx_twim_evt_t const *p_event, void *p_co
 static void coines_i2c1_event_handler(nrfx_twim_evt_t const *p_event, void *p_context)
 {
     (void)p_context;
+    coines_i2c_bus_transaction_complete_callback(COINES_I2C_BUS_1 , (p_event->type == NRFX_TWIM_EVT_DONE) ? true : false );
     switch (p_event->type)
     {
         case NRFX_TWIM_EVT_DONE:
@@ -204,6 +210,7 @@ static void coines_i2c1_event_handler(nrfx_twim_evt_t const *p_event, void *p_co
 static void coines_i2c_int_event_handler(nrfx_twim_evt_t const *p_event, void *p_context)
 {
     (void)p_context;
+    coines_i2c_bus_transaction_complete_callback(COINES_I2C_BUS_INT , (p_event->type == NRFX_TWIM_EVT_DONE) ? true : false );
     switch (p_event->type)
     {
         case NRFX_TWIM_EVT_DONE:
@@ -283,7 +290,7 @@ bool coines_is_spi_enabled(enum coines_spi_bus bus)
 static int16_t coines_get_i2c_instance(enum coines_i2c_bus bus)
 {
     int16_t return_val = COINES_SUCCESS;
-    int8_t instance_idx = coines_i2c_intf[bus].instance;
+    uint8_t instance_idx = coines_i2c_intf[bus].instance;
 
     if ((bus < COINES_I2C_BUS_MAX) && (bus >= COINES_I2C_BUS_0))
     {   
@@ -303,7 +310,7 @@ static int16_t coines_get_i2c_instance(enum coines_i2c_bus bus)
 static int16_t coines_set_i2c_instance(enum coines_i2c_bus bus, uint8_t enable)
 {
     int16_t return_val = COINES_SUCCESS;
-    int8_t instance_idx = coines_i2c_intf[bus].instance;
+    uint8_t instance_idx = coines_i2c_intf[bus].instance;
 
     if ((bus < COINES_I2C_BUS_MAX) && (bus >= COINES_I2C_BUS_0))
     {   
@@ -339,7 +346,7 @@ static int16_t coines_set_i2c_instance(enum coines_i2c_bus bus, uint8_t enable)
 int16_t coines_get_spi_instance(enum coines_spi_bus bus)
 {
     int16_t return_val = COINES_SUCCESS;
-    int8_t instance_idx = coines_spi_intf[bus].instance;
+    uint8_t instance_idx = coines_spi_intf[bus].instance;
 
     if ((bus < COINES_SPI_BUS_MAX) && (bus >= COINES_SPI_BUS_0))
     {
@@ -360,7 +367,7 @@ int16_t coines_get_spi_instance(enum coines_spi_bus bus)
 int16_t coines_set_spi_instance(enum coines_spi_bus bus, uint8_t enable)
 {
     int16_t return_val = COINES_SUCCESS;
-    int8_t instance_idx = coines_spi_intf[bus].instance;
+    uint8_t instance_idx = coines_spi_intf[bus].instance;
 
     if ((bus < COINES_SPI_BUS_MAX) && (bus >= COINES_SPI_BUS_0))
     {
@@ -434,6 +441,11 @@ int16_t coines_config_spi_bus(enum coines_spi_bus bus, enum coines_spi_speed spi
         case  COINES_SPI_SPEED_##coines_spi:         \
             coines_spi_intf[bus].config.frequency = NRF_SPIM_FREQ_##nrf_spi; \
             break \
+            
+#define COINES_NRF_PLATFORM_SPEED_MAP(coines_spi, nrf_spi)  \
+        case  COINES_SPI_PLATFORM_SPEED_##coines_spi:         \
+            coines_spi_intf[bus].config.frequency = NRF_SPIM_FREQ_##nrf_spi; \
+            break \
 
             switch (spi_speed)
             {
@@ -459,7 +471,16 @@ int16_t coines_config_spi_bus(enum coines_spi_bus bus, enum coines_spi_speed spi
             COINES_NRF_SPEED_MAP(6_MHZ, 4M);
             COINES_NRF_SPEED_MAP(7_5_MHZ, 4M);
 
+            COINES_NRF_SPEED_MAP(8_MHZ, 8M);
             COINES_NRF_SPEED_MAP(10_MHZ, 8M);
+
+            COINES_NRF_PLATFORM_SPEED_MAP(125_KHZ, 125K);
+            COINES_NRF_PLATFORM_SPEED_MAP(250_KHZ, 250K);
+            COINES_NRF_PLATFORM_SPEED_MAP(500_KHZ, 500K);
+            COINES_NRF_PLATFORM_SPEED_MAP(1_MHZ, 1M);
+            COINES_NRF_PLATFORM_SPEED_MAP(2_MHZ, 2M);
+            COINES_NRF_PLATFORM_SPEED_MAP(4_MHZ, 4M);
+            COINES_NRF_PLATFORM_SPEED_MAP(8_MHZ, 8M);
 
                 default:
                     coines_spi_intf[bus].config.frequency = NRF_SPIM_FREQ_2M;
@@ -817,7 +838,7 @@ int8_t coines_write_16bit_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint16_
         /* Conversion of payload from big endian to little endian */
         swap_endianness(swapped_reg_data, (uint16_t*)reg_data, count);
 
-        return i2c_write(bus, dev_addr, reg_addr, (uint8_t*)swapped_reg_data, count * sizeof(uint16_t), COINES_I2C_TRANSFER_16BIT);
+        return i2c_write(bus, dev_addr, reg_addr, (uint8_t*)swapped_reg_data, (uint16_t)(count * sizeof(uint16_t)), COINES_I2C_TRANSFER_16BIT);
     }
     else
     {
@@ -899,7 +920,7 @@ int8_t coines_read_16bit_i2c(enum coines_i2c_bus bus, uint8_t dev_addr, uint16_t
     
     if(i2c_transfer_bits == COINES_I2C_TRANSFER_16BIT)
     {
-        ret = i2c_read(bus, dev_addr, reg_addr, (uint8_t*)reg_data, count * sizeof(uint16_t), COINES_I2C_TRANSFER_16BIT);
+        ret = i2c_read(bus, dev_addr, reg_addr, (uint8_t*)reg_data, (uint16_t)(count * sizeof(uint16_t)), COINES_I2C_TRANSFER_16BIT);
         /* Conversion of payload from big endian to little endian */
         swap_endianness((uint16_t*)reg_data, (uint16_t*)reg_data, count);
     }
@@ -1104,7 +1125,7 @@ int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t 
         /* Conversion of payload from big endian to little endian */
         swap_endianness(swapped_reg_data, (uint16_t*)reg_data, count);
 
-        return spi_write(bus, cs_pin, reg_addr, (uint8_t*)swapped_reg_data, count * sizeof(uint16_t), COINES_SPI_TRANSFER_16BIT);
+        return spi_write(bus, cs_pin, reg_addr, (uint8_t*)swapped_reg_data, (uint16_t)(count * sizeof(uint16_t)), COINES_SPI_TRANSFER_16BIT);
     }
     else
     {
@@ -1197,7 +1218,7 @@ int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t r
     
     if(spi_transfer_bits == COINES_SPI_TRANSFER_16BIT)
     {
-        ret = spi_read(bus, cs_pin, reg_addr, (uint8_t*)reg_data, count * sizeof(uint16_t), COINES_SPI_TRANSFER_16BIT);
+        ret = spi_read(bus, cs_pin, reg_addr, (uint8_t*)reg_data,(uint16_t)(count * sizeof(uint16_t)), COINES_SPI_TRANSFER_16BIT);
         /* Conversion of payload from big endian to little endian */
         swap_endianness((uint16_t*)reg_data, (uint16_t*)reg_data, count);
     }
@@ -1272,4 +1293,69 @@ int8_t coines_uart_write(enum coines_uart_instance uart_instance, uint8_t *buffe
     }
 
     return COINES_SUCCESS;
+}
+
+/**
+ * @brief This API is used to perform a SPI transfer.
+ */
+int8_t coines_spi_transfer(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t *tx_buff, uint32_t tx_len, uint8_t *rx_buff, uint32_t rx_len)
+{
+    nrfx_err_t error;
+
+    if ((tx_buff == NULL && tx_len > 0) ||
+        (rx_buff == NULL && rx_len > 0))
+    {
+        return COINES_E_INVALID_PARAM;
+    }
+
+    if ((bus < COINES_SPI_BUS_MAX) && (bus >= COINES_SPI_BUS_0))
+    {
+        if (coines_is_spi_enabled(bus))
+        {
+            uint32_t pin_no = multi_io_map[cs_pin];
+            if (pin_no == 0 || pin_no == 0xff)
+            {
+                return COINES_E_FAILURE;
+            }
+            else
+            {
+                nrf_gpio_cfg_output(pin_no);
+            }
+
+            /* Activate CS pin */
+            nrf_gpio_pin_write(pin_no, 0);
+
+            nrfx_spim_xfer_desc_t xfer_desc = NRFX_SPIM_XFER_TRX(tx_buff, tx_len, rx_buff, rx_len);
+
+            /* Perform SPI transaction */
+            error = nrfx_spim_xfer(&coines_spi_intf[bus].peripheral_instance, &xfer_desc, 0);
+
+
+            /* Deactivate CS pin */
+            nrf_gpio_pin_write(pin_no, 1);
+
+            if (error == NRFX_SUCCESS)
+            {
+                return COINES_SUCCESS;
+            }
+            else
+            {
+                return COINES_E_FAILURE;
+            }
+        }
+        else
+        {
+            return COINES_E_SPI_BUS_NOT_ENABLED;
+        }
+    }
+    else
+    {
+        return COINES_E_SPI_INVALID_BUS_INTF;
+    }
+}
+
+/** @brief Callback function invoked when an I2C bus transaction is completed. */
+__attribute__((weak)) void coines_i2c_bus_transaction_complete_callback(enum coines_i2c_bus bus, bool status)
+{
+    ;
 }

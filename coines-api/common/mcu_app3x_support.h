@@ -56,6 +56,7 @@
 #include "nrfx_timer.h"
 #include "nrf_timer.h"
 #include "nrfx_ppi.h"
+#include "nrf_wdt.h"
 
 #include "app_error.h"
 #include "app_util.h"
@@ -64,7 +65,7 @@
 #include "app_usbd_string_desc.h"
 #include "app_usbd_cdc_acm.h"
 #include "app_usbd_serial_num.h"
-
+#include "app_timer.h"
 #include "app30_eeprom.h"
 #include "flogfs.h"
 #include "w25_common.h"
@@ -193,6 +194,17 @@
 /* #define TIMER_TICKS_TO_USEC(t)         (((uint64_t)t * UINT64_C(1)) / TIMER_TICKS_PER_SECOND) */
 #define TIMER_TICKS_TO_NSEC(t)   (((uint64_t)t * UINT64_C(1000)) / TIMER_TICKS_PER_SECOND)
 
+/* Watchdog timer configuration */
+/* Provide behaviour fallback */
+#ifndef NRFX_WDT_CONFIG_BEHAVIOUR
+#define NRFX_WDT_CONFIG_BEHAVIOUR (NRF_WDT_BEHAVIOUR_RUN_SLEEP | NRF_WDT_BEHAVIOUR_RUN_HALT)
+#endif
+/* Fallback default timeout (ms) if user passes 0 */
+#ifndef NRFX_WDT_CONFIG_RELOAD_VALUE
+#define NRFX_WDT_CONFIG_RELOAD_VALUE 2000
+#endif
+
+
 /**********************************************************************************/
 /* typedef */
 /**********************************************************************************/
@@ -245,6 +257,21 @@ void bat_status_read_callback(void);
  * @return      : None
  */
 void usbd_user_ev_handler(app_usbd_event_type_t event);
+
+/**
+ * @brief Retrieve the current watchdog reload value in raw hardware ticks.
+ *
+ * @return Reload value in watchdog hardware ticks. Returns 0 if the watchdog has
+ *         not been configured yet.
+ */
+uint32_t coines_watchdog_get_reload_ticks(void);
+
+/**
+ * @brief Get the effective watchdog timeout in milliseconds.
+ *
+ * @return Effective timeout in milliseconds; 0 if watchdog is not initialized.
+ */
+uint32_t coines_watchdog_get_effective_timeout_ms(void);
 
 /*!
  * @brief This API is used to config RTC

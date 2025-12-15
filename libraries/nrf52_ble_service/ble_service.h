@@ -135,12 +135,14 @@ NRF_RINGBUF_DEF(m_ringbuf, RECEIVE_BUFF_LEN);
 typedef void (*temp_read_callback)(void * data, uint8_t* data_len);
 typedef void (*bat_read_callback)(void);
 typedef void (*data_receive_callback)(void);
+typedef void (*data_tx_callback)(void);
 
 typedef struct ble_service_init_s
 {
     temp_read_callback temp_read_callback;
     bat_read_callback batt_status_read_callback;
     data_receive_callback data_rx_callback;
+    data_tx_callback data_tx_callback;
     char * adv_name;
     int8_t tx_power;
 }ble_service_init_t;

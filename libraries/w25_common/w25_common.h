@@ -116,6 +116,23 @@ void w25_get_manufacture_and_devid(w25_deviceinfo_t* info);
  */
 w25_nand_error_t w25_init(uint16_t *device_id);
 
+/*!
+ * @brief       This function initialises the spi module
+ */
+uint8_t w25_spi_init(void);
+
+/*!
+ * @brief       This function sends and receives the data via SPI
+ */
+
+uint8_t w25_spi_rx_tx(uint8_t spi_entity, uint8_t address, uint8_t* tx_buffer, uint16_t tx_count, uint8_t* rx_buffer, uint16_t rx_count);
+
+/*!
+ * @brief       This function sets the gpio pin given as input
+ */
+
+void w25_gpio_pin_output_set(uint8_t pin);
+
 #ifdef __cplusplus
 }
 #endif

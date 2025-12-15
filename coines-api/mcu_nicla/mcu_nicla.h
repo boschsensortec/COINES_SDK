@@ -84,7 +84,6 @@
 /* functions */
 /**********************************************************************************/
 typedef void (*ISR_CB)(uint32_t pin, uint32_t polarity);
-uint8_t pmic_pull_battery_level(void);
 /*lint -e18 */
 int opendir(const char *dirname);
 char readdir(char* name);

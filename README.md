@@ -6,7 +6,7 @@ With **CO**mmunication with **IN**ertial and **E**nvironmental **S**ensors (**CO
 
 To overcome the limitations (e.g., inaccurate delays,etc.) due to USB communication latencies, some C examples can also be cross-compiled and run directly on the Application Board's microcontroller.
 
-## Quick Start 
+## Quick Start
 
 To get started with the Bosch Sensortec Application Board, follow these steps:
 1. Clone the repository.

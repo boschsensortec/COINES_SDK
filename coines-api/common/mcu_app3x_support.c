@@ -60,9 +60,6 @@
 /**********************************************************************************/
 /* global variables */
 /**********************************************************************************/
-#if defined(MCU_APP31) || defined(MCU_HEAR3X)
-extern uint8_t pmic_pull_battery_level(void);
-#endif
 
 /* Handles the request to switch to bootloader mode from the application */
 uint32_t app_start_address = APP_START_ADDRESS;
@@ -150,6 +147,10 @@ uint8_t map_nrfpol_to_coinespol[COINES_PIN_INTERRUPT_MODE_MAXIMUM] = {
 
 static void gpiohandler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action);
 
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+/* No legacy driver channel needed when using HAL directly */
+static bool g_wdt_inited = false;
+#endif
 /**********************************************************************************/
 /* static function declaration */
 /**********************************************************************************/
@@ -354,7 +355,10 @@ void bat_status_read_callback(void)
 #if defined(MCU_APP30)
     (void)nrfx_saadc_sample();
 #else
-    (void) ble_service_battery_level_update(pmic_pull_battery_level(), 1);
+    uint16_t bat_status_mv = 0;
+    uint8_t bat_status_percent = 0;
+    (void) coines_read_bat_status(&bat_status_mv, &bat_status_percent);
+    (void) ble_service_battery_level_update(bat_status_percent, 1);
 #endif
 }
 
@@ -865,5 +869,107 @@ void coines_execute_critical_region(coines_critical_callback callback)
 
     CRITICAL_REGION_EXIT();
 }
+
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+/* Convert ms to 32.768 kHz ticks (LFCLK) */
+static uint32_t ms_to_lfclk_ticks(uint32_t ms)
+{
+    /* Avoid overflow: (ms * 32768) / 1000 */
+    uint64_t ticks = ((uint64_t)ms * 32768ULL) / 1000ULL;
+    if (ticks > 0xFFFFFFFFULL)
+    {
+        ticks = 0xFFFFFFFFULL;
+    }
+    return (uint32_t)ticks;
+}
+
+/*!
+ * @brief This API is used to Configure and start the hardware watchdog.
+ */
+int16_t coines_watchdog_config(uint32_t timeout_ms)
+{
+    if (g_wdt_inited)
+    {
+        return COINES_E_WDT_HW_ERR_ALREADY_INIT;
+    }
+
+#ifndef WDT_ENABLED
+    /* Driver not enabled in sdk_config.h */
+    return COINES_E_WDT_HW_ERR_INIT;
+#endif
+
+    /* Configure WDT directly via HAL (avoid legacy driver unresolved nrfx_wdt_* symbols) */
+    uint32_t ticks = ms_to_lfclk_ticks(timeout_ms);
+    if (ticks == 0)
+    {
+        ticks = ms_to_lfclk_ticks(NRFX_WDT_CONFIG_RELOAD_VALUE);
+    }
+
+    /* Configure behaviour and reload value via HAL */
+    nrf_wdt_behaviour_set((nrf_wdt_behaviour_t)NRFX_WDT_CONFIG_BEHAVIOUR);
+    nrf_wdt_reload_value_set(ticks);
+    nrf_wdt_reload_request_enable(NRF_WDT_RR0);
+    nrf_wdt_task_trigger(NRF_WDT_TASK_START);
+    /* Perform an immediate feed to load the counter so small timeouts don't expire before first task loop */
+    nrf_wdt_reload_request_set(NRF_WDT_RR0);
+    g_wdt_inited = true;
+    return COINES_SUCCESS;
+}
+
+/**
+ * @brief Feed (service) the hardware watchdog.
+ *
+ * Writes the required register sequence to reset the watchdog countdown, preventing
+ * a system reset. This function should be called at a cadence strictly less than
+ * the configured timeout.
+ */
+void coines_watchdog_feed(void)
+{
+    if (!g_wdt_inited)
+    {
+        return;
+    }
+    /* Feed via HAL */
+    nrf_wdt_reload_request_set(NRF_WDT_RR0);
+}
+
+
+/**
+ * @brief Query the status of the most recent watchdog feed operation.
+ */
+int16_t coines_watchdog_feed_status(void)
+{
+    if (!g_wdt_inited)
+    {
+        return COINES_E_WDT_HW_ERR_UNINIT;
+    }
+    nrf_wdt_reload_request_set(NRF_WDT_RR0);
+    /* REQSTATUS bit clears after the watchdog reloads internally; check that RR0 is enabled */
+    if(nrf_wdt_reload_request_is_enabled(NRF_WDT_RR0))
+        return COINES_SUCCESS;
+    return COINES_E_FAILURE;
+}
+
+/**
+ * @brief Retrieve the current watchdog reload value in raw hardware ticks.
+ */
+uint32_t coines_watchdog_get_reload_ticks(void)
+{
+    return g_wdt_inited ? nrf_wdt_reload_value_get() : 0u;
+}
+
+/**
+ * @brief Get the effective watchdog timeout in milliseconds.
+ */
+uint32_t coines_watchdog_get_effective_timeout_ms(void)
+{
+    uint32_t ticks = coines_watchdog_get_reload_ticks();
+    /* (ticks * 1000) / 32768, avoid 64-bit if possible, ticks fits 32-bit */
+    return (ticks == 0u) ? 0u : (uint32_t)(((uint64_t)ticks * 1000ULL) / 32768ULL);
+}
+
+#endif
+
+
 
 /** @}*/

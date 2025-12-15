@@ -20,6 +20,12 @@ ifeq ($(TARGET),MCU_APP31)
     include $(APP31_SRC_DIR)/mcu_app31.mk
     INCLUDEPATHS += $(INCLUDEPATHS_COINES)
 endif
+
+ifeq ($(TARGET),MCU_HEAR3X)
+    HEAR3X_SRC_DIR = $(COINES_INSTALL_PATH)/coines-api/mcu_hear3x
+    include $(HEAR3X_SRC_DIR)/mcu_hear3x.mk
+    INCLUDEPATHS += $(INCLUDEPATHS_COINES)
+endif
 endif
 
 

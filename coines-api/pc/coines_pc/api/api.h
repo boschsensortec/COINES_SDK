@@ -66,7 +66,7 @@
 #define NICLA_BAUD_RATE                        9600
 
 #ifndef COINES_BUFFER_SIZE
-#define COINES_BUFFER_SIZE                     3084
+#define COINES_BUFFER_SIZE                     12300
 #endif
 
 #define COINES_STREAM_CONFIG_BUFF_SIZE         (50)

@@ -2,13 +2,14 @@ CROSS_COMPILE = arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 AR = $(CROSS_COMPILE)ar
 
-CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -c -Os -g -Wall
+CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 -c -Os -g -Wall -Wuninitialized
 CFLAGS += -ffunction-sections -fdata-sections
 
 CFLAGS += -DNRF52840_XXAA -D__HEAP_SIZE=8192 -D__STACK_SIZE=8192 -DSWI_DISABLE0 -DUSE_APP_CONFIG
 CFLAGS += -DNRF_SD_BLE_API_VERSION=6
 CFLAGS += -DS140
 CFLAGS += -DSOFTDEVICE_PRESENT
+CFLAGS += -DFLASH_SPIM_NON_BLOCKING
 ifeq ($(PRE_CHARGE_EN),1)
 	CFLAGS += -DPRE_CHARGE_EN
 endif
@@ -28,7 +29,7 @@ $(COMMON)/mcu_app3x_support.c \
 $(COMMON)/mcu_app3x_interface.c \
 $(COMMON)/mcu_app3x.c \
 $(COMMON)/mcu_app3x_stream.c \
-$(COMMON)/mcu_app3x_interface_spi_nb.c \
+$(COMMON)/mcu_app3x_interface_nb.c \
 $(THIRD_PARTY_DIR)/ds28e05/ds28e05.c \
 $(LIB_DIR)/nrf52_eeprom/app30_eeprom.c \
 $(LIB_DIR)/w25_common/w25_common.c \

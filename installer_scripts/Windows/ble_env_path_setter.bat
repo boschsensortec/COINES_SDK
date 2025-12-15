@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Get command line arguments 
+:: Get command line arguments
 set "NewPath=%~1"
 
 :: UpdateEnvironmentPath

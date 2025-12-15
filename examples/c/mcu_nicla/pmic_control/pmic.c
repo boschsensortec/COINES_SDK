@@ -53,6 +53,8 @@ int main(void)
     struct bq_status bqstatus = {0, 0, 0, 0, 0, 0};
     struct fault_mask_reg faults = {0, 0, 0, 0};
     struct ts_flt_mask_config tscfg = {0, 0, 0, 0, 0};
+    uint16_t bat_status_mv = 0;
+    uint8_t bat_status_percent = 0;
 
 	struct coines_comm_intf_config intfconfig =
 	{
@@ -115,8 +117,12 @@ int main(void)
         printf("BQ fault BAT UVLO = %d\r\n",faults.bat_uvlo);
         printf("BQ fault BAT OCP = %d\r\n",faults.bat_ocp);
 
+        //Get battery status
+        (void)coines_read_bat_status(&bat_status_mv, &bat_status_percent);
+
         //Get battery voltage
-        printf("BQ Battery level in percentage = %d %% \r\n", pmic_pull_battery_level());
+        printf("BQ Battery level in percentage = %d %% \r\n", bat_status_percent);
+        printf("BQ Battery voltage in mV = %d mV\r\n", bat_status_mv);
 
         coines_delay_msec(2000);
 

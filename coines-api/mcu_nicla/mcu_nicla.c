@@ -92,9 +92,7 @@ static volatile uint32_t last_button_pressed_time = 0;  /*last button pressed ti
 struct bq_dev pmic_dev =
 { .i2c_address = BQ_DRV_ADDR, .cd_pin_state = 1, .read = common_i2c_read, .write = common_i2c_write,
   .delay_ms = common_delay_ms, .cd_set = common_pmic_cd_set };
-static volatile uint8_t pmic_battery_percent = 0;
-
-static uint8_t battery_level_in_percentage(const uint16_t mvolts);
+static struct bq_status bq_state;
 
 /*For LED I2C communication*/
 struct led_dev led_dev =
@@ -253,44 +251,20 @@ void button1_cb_nicla(uint32_t param1, uint32_t param2)
     }
 }
 
-/**@brief Function for converting battery voltage to percentage.
- *
- * @details This is just an estimated percentage considering Maximum charging voltage as 4.2 and cut-off voltage as 3.0.
- *          It will vary between different batteries
- */
-static uint8_t battery_level_in_percentage(const uint16_t mvolts)
-{
-    float output_volt;
-    uint8_t battery_level;
-
-    const float battery_max = 4.200f; /*maximum voltage of battery */
-    const float battery_min = 3.000f; /*minimum voltage of battery before shutdown */
-    float input_volt = mvolts;
-
-    output_volt = (((input_volt / 1000.0f) - battery_min) / (battery_max - battery_min)) * 100.0f;
-    battery_level = (uint8_t)output_volt;
-
-    return battery_level;
-}
-
 /*!
  * @brief Callback for pmic reading and vin detection Timer Instance 1
  */
 void pmic_reading_vin_detection(void)
 {
-    struct bq_status bqstatus;
-    uint8_t bat_vbbm = 0;
-    int8_t rslt;
-    uint16_t batt_status_in_milli_volts = 0;
-
     /*update charging status*/
     if (pmic_dev.cd_pin_state == 1)
     {
         (void)bq_charge_enable(&pmic_dev);
     }
 
-    (void)bq_get_status(&pmic_dev, &bqstatus);
-    if (bqstatus.status == 0) /*Status different from "Charge in progress" and "Charge done" */
+    // At least one read operation (any register) is required periodically to prevent the watchdog reset.
+    (void)bq_get_status(&pmic_dev, &bq_state);
+    if (bq_state.status == BQ_STATUS_READY) /*Status different from "Charge in progress" and "Charge done" */
     {
         (void)bq_charge_disable(&pmic_dev);
     }
@@ -299,22 +273,6 @@ void pmic_reading_vin_detection(void)
         /*NTD*/
         /*Keep CD low when Vin is present => Charge enabled*/
     }
-
-    /*update battery percentage*/
-
-    rslt = bq_get_battery_voltage(&pmic_dev, &bat_vbbm); /*Voltage Based Battery Monitor */
-    if (BQ_OK == rslt)
-    {
-        batt_status_in_milli_volts = (uint16_t) (((bat_vbbm * 4.2) / 100.0) * 1000.0); /*Convert VBMON percentage to
-                                                                                        * voltage => Volt = VBMON *
-                                                                                        * VBATREG */
-        pmic_battery_percent = battery_level_in_percentage(batt_status_in_milli_volts);
-    }
-}
-
-uint8_t pmic_pull_battery_level(void)
-{
-    return pmic_battery_percent;
 }
 
 /*!
@@ -643,6 +601,22 @@ void coines_detach_interrupt(enum coines_multi_io_pin pin_number)
     isr_cb[pin_number] = NULL;
     nrfx_gpiote_in_uninit(pin_num);
     nrfx_gpiote_in_event_disable(pin_num);
+}
+
+/*!
+ * @brief This API is used to read the battery status .
+ *
+ */
+int16_t coines_read_bat_status(uint16_t *bat_status_mv, uint8_t *bat_status_percent)
+{
+    int8_t rslt;
+    rslt = bq_get_battery_status(&pmic_dev, bat_status_mv, bat_status_percent);
+    if (rslt != BQ_OK)
+    {
+        return COINES_E_FAILURE;
+    }
+
+    return COINES_SUCCESS;
 }
 
 /*!
