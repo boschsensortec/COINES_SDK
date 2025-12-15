@@ -39,7 +39,7 @@
 #define COINES_H_
 
 #if !defined(COINES_VERSION)
-#define COINES_VERSION  "v2.11.0"
+#define COINES_VERSION  "v2.12.1"
 #endif
 
 /* C++ Guard macro - To prevent name mangling by C++ compiler */
@@ -295,8 +295,20 @@ extern "C" {
 /*! COINES_SDK error code - Invalid function argument */
 #define COINES_E_INVALID_INPUT                     -70
 
+/**< COINES_SDK error code - Watchdog timer hardware initialization error */
+#define COINES_E_WDT_HW_ERR_INIT                   -71 
+
+ /**< COINES_SDK error code - Watchdog timer hardware channel error */
+#define COINES_E_WDT_HW_ERR_CHANNEL                -72
+
+/**< COINES_SDK error code - Watchdog timer hardware already initialized error */
+#define COINES_E_WDT_HW_ERR_ALREADY_INIT           -73 
+
+/**< COINES_SDK error code - Watchdog timer hardware un-initialized error */
+#define COINES_E_WDT_HW_ERR_UNINIT                 -74
+
 /*! Variable to hold the number of error codes */
-#define NUM_ERROR_CODES                             71
+#define NUM_ERROR_CODES                             75
 
 /**
  * EEPROM ID size in bytes
@@ -383,6 +395,11 @@ extern "C" {
 #define FIFO_STREAM_RSP_TIMEOUT_MS                  10000
 
 #if (defined(MCU_APP30) || defined(MCU_APP31) || defined(MCU_HEAR3X))
+/*!< Maximum file name length for COINES_SDK MTP.
+
+Note: Do not modify this value. It must remain aligned with FLOG_MAX_FNAME_LEN in flogfs.h for correct operation.
+*/
+#define FILE_NAME_LENGTH_MAX                        151
 #include <stdio.h>
 extern FILE *bt_w, *bt_r;
 
@@ -392,7 +409,7 @@ extern FILE *bt_w, *bt_r;
 struct dirent
 {
     size_t d_namlen;
-    char d_name[41];
+    char d_name[FILE_NAME_LENGTH_MAX];
 };
 
 typedef struct
@@ -473,24 +490,39 @@ enum coines_sampling_unit {
  * > Note - don't change the values
  */
 enum coines_spi_speed {
-    COINES_SPI_SPEED_10_MHZ = 6, /*< 10 MHz */
-    COINES_SPI_SPEED_7_5_MHZ = 8, /*< 7.5 MHz */
-    COINES_SPI_SPEED_6_MHZ = 10, /*< 6 MHz */
-    COINES_SPI_SPEED_5_MHZ = 12, /*< 5 MHz */
-    COINES_SPI_SPEED_3_75_MHZ = 16, /*< 3.75 MHz */
-    COINES_SPI_SPEED_3_MHZ = 20, /*< 3 MHz */
-    COINES_SPI_SPEED_2_5_MHZ = 24, /*< 2.5 MHz */
-    COINES_SPI_SPEED_2_MHZ = 30, /*< 2 MHz */
-    COINES_SPI_SPEED_1_5_MHZ = 40, /*< 1.5 MHz */
-    COINES_SPI_SPEED_1_25_MHZ = 48, /*< 1.25 MHz */
-    COINES_SPI_SPEED_1_2_MHZ = 50, /*< 1.2 MHz */
-    COINES_SPI_SPEED_1_MHZ = 60, /*< 1 MHz */
-    COINES_SPI_SPEED_750_KHZ = 80, /*< 750 kHz */
-    COINES_SPI_SPEED_600_KHZ = 100, /*< 600 kHz */
-    COINES_SPI_SPEED_500_KHZ = 120, /*< 500 kHz */
-    COINES_SPI_SPEED_400_KHZ = 150, /*< 400 kHz */
-    COINES_SPI_SPEED_300_KHZ = 200, /*< 300 kHz */
-    COINES_SPI_SPEED_250_KHZ = 240 /*< 250 kHz */
+    /*
+     * Legacy SPI speeds supported on APP2.0:
+     */
+    COINES_SPI_SPEED_10_MHZ = 6,      /*< 10 MHz */
+    COINES_SPI_SPEED_8_MHZ = 7,       /*< 8 MHz */
+    COINES_SPI_SPEED_7_5_MHZ = 8,     /*< 7.5 MHz */
+    COINES_SPI_SPEED_6_MHZ = 10,      /*< 6 MHz */
+    COINES_SPI_SPEED_5_MHZ = 12,      /*< 5 MHz */
+    COINES_SPI_SPEED_3_75_MHZ = 16,   /*< 3.75 MHz */
+    COINES_SPI_SPEED_3_MHZ = 20,      /*< 3 MHz */
+    COINES_SPI_SPEED_2_5_MHZ = 24,    /*< 2.5 MHz */
+    COINES_SPI_SPEED_2_MHZ = 30,      /*< 2 MHz */
+    COINES_SPI_SPEED_1_5_MHZ = 40,    /*< 1.5 MHz */
+    COINES_SPI_SPEED_1_25_MHZ = 48,   /*< 1.25 MHz */
+    COINES_SPI_SPEED_1_2_MHZ = 50,    /*< 1.2 MHz */
+    COINES_SPI_SPEED_1_MHZ = 60,      /*< 1 MHz */
+    COINES_SPI_SPEED_750_KHZ = 80,    /*< 750 kHz */
+    COINES_SPI_SPEED_600_KHZ = 100,   /*< 600 kHz */
+    COINES_SPI_SPEED_500_KHZ = 120,   /*< 500 kHz */
+    COINES_SPI_SPEED_400_KHZ = 150,   /*< 400 kHz */
+    COINES_SPI_SPEED_300_KHZ = 200,   /*< 300 kHz */
+    COINES_SPI_SPEED_250_KHZ = 240,   /*< 250 kHz */
+
+    /*
+     * Fixed SPI speeds supported on APP3.0, APP3.1, Nicla, and Hearable boards:
+     */
+    COINES_SPI_PLATFORM_SPEED_125_KHZ = 125000,
+    COINES_SPI_PLATFORM_SPEED_250_KHZ = 250000,
+    COINES_SPI_PLATFORM_SPEED_500_KHZ = 500000,
+    COINES_SPI_PLATFORM_SPEED_1_MHZ   = 1000000,
+    COINES_SPI_PLATFORM_SPEED_2_MHZ   = 2000000,
+    COINES_SPI_PLATFORM_SPEED_4_MHZ   = 4000000,
+    COINES_SPI_PLATFORM_SPEED_8_MHZ   = 8000000
 };
 
 /*!
@@ -1667,6 +1699,21 @@ uint16_t coines_uart_read(enum coines_uart_instance uart_instance, uint8_t *buff
  */
 int8_t coines_uart_write(enum coines_uart_instance uart_instance, uint8_t *buffer, uint16_t length);
 
+/*!
+ * @brief Perform a blocking SPI full duplex transfer on the specified SPI bus.
+ *
+ * @param[in]  bus      : SPI bus.
+ *  @param[in] cs_pin   : Chip select pin number for SPI write.
+ * @param[in]  tx_buff  : Pointer to transmit buffer. 
+ * @param[in]  tx_len   : Number of bytes to transmit. 
+ * @param[out] rx_buff  : Pointer to receive buffer.
+ * @param[in]  rx_len   : Number of bytes to receive. 
+ *
+ * @retval 0 -> Success
+ * @retval Any non zero value -> Fail
+ */
+int8_t coines_spi_transfer(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t *tx_buff, uint32_t tx_len, uint8_t *rx_buff, uint32_t rx_len);
+
 
 #endif
 
@@ -1688,7 +1735,37 @@ void coines_ship_mode(void);
 
 #endif
 
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+/*!
+ * @brief This API is used to Configure and start the hardware watchdog.
+ *
+ * @param[in] timeout_ms Desired watchdog timeout in milliseconds. A value of 0 is invalid.
+ *
+ * @return Results of API execution status.
+ * @retval 0 -> Success
+ * @retval Any non zero value -> Fail
+ */
+int16_t coines_watchdog_config(uint32_t timeout_ms);
 
+/**
+ * @brief Feed (service) the hardware watchdog.
+ *
+ * Writes the required register sequence to reset the watchdog countdown, preventing
+ * a system reset. This function should be called at a cadence strictly less than
+ * the configured timeout.
+ */
+void coines_watchdog_feed(void);
+
+/**
+ * @brief Query the status of the most recent watchdog feed operation.
+ *
+ * @return Results of API execution status.
+ * @retval 0 -> Success
+ * @retval Any non zero value -> Fail
+ */
+int16_t coines_watchdog_feed_status(void);
+
+#endif
 
 #ifdef __cplusplus
 }

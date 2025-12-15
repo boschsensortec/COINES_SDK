@@ -199,4 +199,5 @@ int16_t coines_config_i2c_bus_internal(enum coines_i2c_bus bus,
                                        enum coines_i2c_mode i2c_mode,
                                        enum coines_i2c_pin_map pin_map);
 
+
 #endif /* MCU_APP3X_INTERFACE_H_ */

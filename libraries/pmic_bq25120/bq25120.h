@@ -50,7 +50,7 @@ extern "C" {
 #endif
 
 /*! macro definitions */
-#ifdef PRE_CHARGE_EN
+#if PRE_CHARGE_EN
 #define PRECHRG_CFG_TERM_STATE BQ_ITERM_ENABLE
 #else
 #define PRECHRG_CFG_TERM_STATE BQ_ITERM_DISABLE
@@ -74,6 +74,7 @@ int8_t bq_ack_push_button_events(struct bq_dev *dev, uint8_t *EventOcuured);
 int8_t bq_set_ilim_bat_uvlo(struct bq_dev *dev, struct bq_ilim_bat_uvlo cfg);
 int8_t bq_get_battery_voltage(struct bq_dev *dev, uint8_t *batvolt);
 int8_t bq_get_battery_soc(struct bq_dev *dev, uint8_t *batsoc);
+int8_t bq_get_battery_status(struct bq_dev *dev, uint16_t *bat_mv, uint8_t *bat_soc);
 int8_t bq_set_vin_dpm_timer(struct bq_dev *dev, struct bq_vim_and_timers cfg);
 int8_t bq_charge_enable(struct bq_dev *dev);
 int8_t bq_charge_disable(struct bq_dev *dev);

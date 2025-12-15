@@ -94,7 +94,6 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
                             APP_USBD_CDC_COMM_PROTOCOL_NONE);
 
 #if defined(MCU_APP31) ||defined(MCU_HEAR3X)
-uint8_t pmic_pull_battery_level(void);
 void coines_get_device_ficr(uint64_t * devid);
 #endif
 

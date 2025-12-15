@@ -69,7 +69,7 @@ DOCLINES = (__doc__ or "").split("\n")
 copy_dependencies()
 setuptools.setup(
     name="coinespy",
-    version="1.0.5",
+    version="1.0.6",
     author="Bosch Sensortec GmbH",
     author_email="contact@bosch-sensortec.com",
     url="https://www.bosch-sensortec.com/",

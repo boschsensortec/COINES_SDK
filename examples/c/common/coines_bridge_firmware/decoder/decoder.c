@@ -60,6 +60,7 @@
 /**********************************************************************************/
 /* local macro definitions */
 /**********************************************************************************/
+#define LEGACY_PROTOCOL_MCU_NICLA_RW_BUFF_SIZE 4096
 
 /**********************************************************************************/
 /* constant definitions */
@@ -86,8 +87,12 @@ static uint16_t timeout_required;
 /*! Variable used in write/read function */
 static uint32_t sensor_cmd_size = 0;
 
+#if defined(MCU_APP30) || defined(MCU_APP31) || defined(MCU_HEAR3X)
 /*! Buffer used to hold the read/write data */
 static uint8_t sensor_cmd_buffer[COM_RW_BUFF_SIZE + TIMESTAMP_SIZE];
+#elif defined(MCU_NICLA)
+static uint8_t sensor_cmd_buffer[LEGACY_PROTOCOL_MCU_NICLA_RW_BUFF_SIZE + TIMESTAMP_SIZE];
+#endif
 
 /*! Flag to check whether MCU time is needed or not */
 static uint8_t use_timestamp = 0;

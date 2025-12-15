@@ -57,7 +57,7 @@ either expressed or implied, of the FLogFS Project.
 #define W25N02_FS_NUM_BLOCKS        (2008)
 #define W25N01_FS_NUM_BLOCKS        (1004)
 
-#if defined(MCU_HEAR3X)
+#if defined(MCU_HEAR3X) || defined(HEAR3X_MTP_FW)
 #define FS_NUM_BLOCKS        W25N01_FS_NUM_BLOCKS
 #else
 #define FS_NUM_BLOCKS        W25N02_FS_NUM_BLOCKS

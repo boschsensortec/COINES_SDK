@@ -492,6 +492,7 @@ int8_t coines_write_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_add
  */
 int8_t coines_write_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits)
 {
+    (void)spi_transfer_bits;
     return (int8_t)coines_write_16bit(bus, cs_pin, reg_addr, reg_data, count);
 }
 
@@ -514,6 +515,7 @@ int8_t coines_read_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint8_t reg_addr
  */
 int8_t coines_read_16bit_spi(enum coines_spi_bus bus, uint8_t cs_pin, uint16_t reg_addr, void *reg_data, uint16_t count, enum coines_spi_transfer_bits spi_transfer_bits)
 {
+    (void)spi_transfer_bits;
     return (int8_t)coines_read_16bit(bus, cs_pin, reg_addr, reg_data, count);
 }
 

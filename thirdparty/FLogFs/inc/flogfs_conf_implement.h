@@ -38,11 +38,11 @@ either expressed or implied, of the FLogFS Project.
 
 #include "w25_common.h"
 #include "flogfs.h"
-#if defined(MCU_APP30) || defined(MCU_HEAR3X)
+#if defined(MCU_APP30) || defined(MCU_HEAR3X) || defined(APP30_MTP_FW) || defined(HEAR3X_MTP_FW)
 #include "w25n02jw.h"
 #include "w25n01gw.h"
 #include "w25m02gw.h"
-#else
+#elif defined(MCU_APP31) || defined(APP31_MTP_FW)
 #include "w25n02kw.h"
 #endif
 
@@ -123,7 +123,7 @@ static inline flog_result_t flash_initialize(void){
 
 	if(w25_init(&device_id) == W25_NAND_INITIALIZED)
 	{
-#if defined(MCU_APP30) || defined(MCU_HEAR3X)
+#if defined(MCU_APP30) || defined(MCU_HEAR3X) || defined(APP30_MTP_FW) || defined(HEAR3X_MTP_FW)
 		if((device_id == W25N01GW_DEVICE_ID) || (device_id == W25M02GW_DEVICE_ID))
 		{
 			flash.initial_bbm = w25n01gw_initial_bbm;
@@ -184,7 +184,7 @@ static inline flog_result_t flash_initialize(void){
 			flash.read_spare = w25n02jw_read_spare;
 			flash.load_sector_spare = w25n02jw_load_sector_spare;
 		}
-#else
+#elif defined(MCU_APP31) || defined(APP31_MTP_FW)
 		if(device_id == W25N02KW_DEVICE_ID) /*APP3.1 - W25N02KW Latest Flash chip*/
 		{
 			flash.initial_bbm = w25n02kw_initial_bbm;

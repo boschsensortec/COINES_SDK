@@ -14,7 +14,7 @@ The tool has additional capability to switch from COINES example program to Boot
 | APP3.X USB/BLE DFU Bootloader only                 | `$ ./app_switch 0xF0000`    |
 | USB MTP firmware of APP3.X                         | `$ ./app_switch usb_mtp`    |
 | USB MTP firmware of APP3.0                         | `$ ./app_switch 0x28000`    |
-| USB MTP firmware of APP3.1                         | `$ ./app_switch 0xE3800`    |
+| USB MTP firmware of APP3.1                         | `$ ./app_switch 0xE4000`    |
 |                                                    | `$ ./app_switch 0x440000`   |
 
 ## App switch using port info

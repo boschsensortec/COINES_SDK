@@ -1,7 +1,7 @@
 TARGET ?= PC
 USE_FREERTOS?=0
 
-# COMPort name to download the binary 
+# COMPort name to download the binary
 COM_PORT ?=
 
 # On using Software reset API(coines_soft_reset()) from COINES_SDK , After reset device jumps to the address specified in APP_START_ADDRESS.
@@ -42,8 +42,8 @@ PRE_CHARGE_EN ?= 0
 
 ################################ MCU Target common - APP3.0,NICLA,MCU_APP31 ############################
 ifeq ($(TARGET),$(filter $(TARGET),MCU_APP30 MCU_NICLA MCU_APP31 MCU_HEAR3X))
-    CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -c $(OPT) -g3 -Wall -D$(TARGET) -DAPP_START_ADDRESS=$(APP_START_ADDRESS) -ffunction-sections -fdata-sections
-    CPPFLAGS += -mthumb -mabi=aapcs -mcpu=cortex-m4 -c $(OPT) -g3 -Wall -D$(TARGET) -ffunction-sections -fdata-sections
+    CFLAGS += -std=c99 -mthumb -mabi=aapcs -mcpu=cortex-m4 -c $(OPT) -g3 -Wall -Wuninitialized -D$(TARGET) -DAPP_START_ADDRESS=$(APP_START_ADDRESS) -ffunction-sections -fdata-sections
+    CPPFLAGS += -mthumb -mabi=aapcs -mcpu=cortex-m4 -c $(OPT) -g3 -Wall -Wuninitialized -D$(TARGET) -ffunction-sections -fdata-sections
 
     LDFLAGS += -mthumb -mcpu=cortex-m4 -specs=nano.specs -Wl,--cref -Wl,--check-sections \
                -Wl,--gc-sections -Wl,--entry=Reset_Handler -Wl,--unresolved-symbols=report-all \

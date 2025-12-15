@@ -121,6 +121,10 @@ extern "C" {
 /**\Status ans Mode control register parameters*/
 #define BQ_NORMAL_OP_ENABLE                     UINT8_C(0 << 5)
 #define BQ_SHIP_MODE_ENABLE                     UINT8_C(1 << 5)
+#define BQ_STATUS_READY                         UINT8_C(0)
+#define BQ_STATUS_CHARGE_IN_PROGRESS            UINT8_C(1)
+#define BQ_STATUS_CHARGE_DONE                   UINT8_C(2)
+#define BQ_STATUS_FAULT                         UINT8_C(3)
 
 /**\Faults and Faults Mask Register*/
 //VIN overvoltage fault
@@ -227,9 +231,14 @@ extern "C" {
 #define BQ_LOAD_LDO_400_MV                       UINT8_C(1 << 4)
 #define BQ_LOAD_LDO_200_MV                       UINT8_C(1 << 3)
 #define BQ_LOAD_LDO_100_MV                       UINT8_C(1 << 2)
+#define BQ_LOAD_LDO_CODE_MASK                    (BQ_LOAD_LDO_1600_MV | BQ_LOAD_LDO_800_MV | BQ_LOAD_LDO_400_MV | BQ_LOAD_LDO_200_MV | BQ_LOAD_LDO_100_MV)
 //Reset configuration
 #define BQ_LOAD_LDO_RESET_TIME                   UINT8_C(0 << 0)
 #define BQ_LOAD_LDO_RESET_TIME_AND_VIN           UINT8_C(1 << 0)
+
+#define BQ_READ_ENABLE_BIT(x)                    (UINT8_C(x & BQ_LOAD_LDO_ENABLE))
+#define BQ_READ_CODE_BITS(x)                     (UINT8_C(x & BQ_LOAD_LDO_CODE_MASK))
+#define BQ_READ_RESET_BIT(x)                     (UINT8_C(x & BQ_LOAD_LDO_RESET_TIME_AND_VIN))
 
 /**\Push-button control register parameters*/
 //MR Timer adjustment for WAKE1

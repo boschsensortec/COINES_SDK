@@ -50,13 +50,12 @@
 /* own header files */
 /**********************************************************************************/
 #include "w25_common.h"
-#if defined(MCU_APP30) || defined(MCU_HEAR3X)
+#if defined(MCU_APP30) || defined(MCU_HEAR3X) || defined(APP30_MTP_FW) || defined(HEAR3X_MTP_FW)
 #include "w25n01gw.h"
 #include "w25n02jw.h"
-#else
+#elif defined(MCU_APP31) || defined(APP31_MTP_FW)
 #include "w25n02kw.h"
 #endif
-
 /**********************************************************************************/
 /* local macro definitions */
 /**********************************************************************************/
@@ -101,7 +100,6 @@ w25_nand_error_t w25_init_status = W25_NAND_UNINITIALIZED;
 
 /*! Holds the spi handle */
 uint8_t w25_spi_intf_handle = 0;
-
 const nrfx_spim_t flash_spi_instance = NRFX_SPIM_INSTANCE(2);
 nrfx_spim_config_t flash_spi_config = NRFX_SPIM_DEFAULT_CONFIG;
 static nrfx_spim_xfer_desc_t flash_spi_xfer;
@@ -113,12 +111,8 @@ volatile bool spi_xfer_done = false;
 /**********************************************************************************/
 void spi_event_handler(nrfx_spim_evt_t const * p_event, void *p_context);
 void w25_gpio_pin_output_set(uint8_t pin);
-uint8_t w25_spi_init(void);
 static void w25_device_reset(void);
 static uint8_t w25_read_reg(w25_reg_t reg);
-uint8_t w25_spi_rx_tx(uint8_t spi_entity, uint8_t address, uint8_t* tx_buffer,
-                      uint16_t tx_count,
-                      uint8_t* rx_buffer, uint16_t rx_count);
 
 /**
  * @brief SPI user event handler.
@@ -137,6 +131,7 @@ void spi_event_handler(nrfx_spim_evt_t const * p_event, void *p_context)
             break;
     }
 }
+
 
 /*!
  * @brief This function initializes the w25 driver
@@ -177,7 +172,7 @@ w25_nand_error_t w25_init(uint16_t *device_id)
     w25_get_manufacture_and_devid(&info);
 
 
-#if defined(MCU_APP30) || defined(MCU_HEAR3X)
+#if defined(MCU_APP30) || defined(MCU_HEAR3X) || defined(APP30_MTP_FW) || defined(HEAR3X_MTP_FW)
 
     if (((info.device_id == W25N01GW_DEVICE_ID) || (info.device_id == W25M02GW_DEVICE_ID)) &&
         (info.mfg_id == W25_MANUFACTURER_ID))
@@ -199,7 +194,7 @@ w25_nand_error_t w25_init(uint16_t *device_id)
         w25_init_status = W25_NAND_INITIALIZED;
         ret_code = W25_NAND_INITIALIZED;
     }
-#else
+#elif defined(MCU_APP31) || defined(APP31_MTP_FW)
     if (((info.device_id == W25N02KW_DEVICE_ID)) && (info.mfg_id == W25_MANUFACTURER_ID))
     {
         w25n02kw_init_protect_reg();
@@ -274,14 +269,14 @@ void w25_gpio_pin_output_set(uint8_t pin)
  * @retval      spi handle
  */
 
-uint8_t w25_spi_init()
+uint8_t w25_spi_init(void)
 {
     flash_spi_config.miso_pin = SPI_MISO_PIN_FLASH;
     flash_spi_config.mosi_pin = SPI_MOSI_PIN_FLASH;
     flash_spi_config.sck_pin = SPI_CLK_PIN_FLASH;
     flash_spi_config.ss_pin = SPI_CS_PIN_FLASH;
     flash_spi_config.frequency = NRF_SPIM_FREQ_8M;
-    
+  
     if (nrfx_spim_init(&flash_spi_instance, &flash_spi_config, spi_event_handler, NULL) != NRFX_SUCCESS)
     {
         return 0;
@@ -326,7 +321,7 @@ uint8_t w25_spi_rx_tx(uint8_t spi_entity, uint8_t address, uint8_t* tx_buffer, u
     flash_spi_xfer.tx_length = tx_count + 1;
     flash_spi_xfer.p_rx_buffer = rx_buffer;
     flash_spi_xfer.rx_length = rx_count;
-
+  
     spi_xfer_done = false;
     nrfx_spim_xfer(&flash_spi_instance, &flash_spi_xfer, NRFX_SPIM_FLAG_TX_POSTINC|NRFX_SPIM_FLAG_RX_POSTINC);
     
@@ -334,7 +329,6 @@ uint8_t w25_spi_rx_tx(uint8_t spi_entity, uint8_t address, uint8_t* tx_buffer, u
     {
         coines_yield();
     }
-   
 
     return 0;
 }

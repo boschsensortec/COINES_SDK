@@ -38,7 +38,11 @@
 #include "mcu_app3x.h"
 #include "mcu_app3x_interface.h"
 
-#if (defined(MCU_APP30)||defined(MCU_APP31))
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+#include "bq25120.h"
+#endif
+
+#if (defined(MCU_APP30) || defined(MCU_APP31))
 #define TMP112Q1_DEV_ADDRESS           0x48 /*Device address of TMP112Q1*/
 #define TMP112Q1_REG_ADDRESS           0x00 /*reg address of TMP112Q1*/
 #endif
@@ -61,12 +65,23 @@
 #define CPU_FREQ_HZ                    64000000   /**<ARM cortex M4 is running at 64Mhz*/
 #define BLE_MTU                        244   /*Maximum payload for BLE com*/
 
+#if defined(MCU_APP31)
+#define MAX_LDO_READ_RETRIES           5
+#define READ_INTERVAL                  APP_TIMER_TICKS(100)
+APP_TIMER_DEF(usb_vin_detection_timer_id);
+APP_TIMER_DEF(mr_button_reset_timer_id);
+#endif
+
 extern uint8_t coines_spi_twi_instances[4];
 volatile bool pmic_dummy_read_pending = false;
 volatile bool serial_connected = false;
 static uint8_t serial_buffer[RX_BUFFER_SIZE] = { 0 };
 static volatile uint16_t serial_idx = 0, read_idx = 0;
 static uint8_t temp_rx;
+
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+static struct bq_status bq_state;
+#endif
 
 volatile bool ble_nus_connected = false;
 volatile bool ble_bas_connected = false;
@@ -78,14 +93,13 @@ volatile bool tx_pending = false;
 volatile uint8_t batt_status_percentage = 0;
 volatile uint16_t batt_status_in_milli_volts = 0;
 volatile bool coines_adc_transfer_done = false;
-static int8_t battery_meas_rslt = COINES_SUCCESS;
 char *ble_device_name;
 enum coines_tx_power ble_tx_power = COINES_TX_POWER_0_DBM;
 
 volatile uint32_t millis_count;
 volatile uint32_t systick_count;
 volatile uint32_t pend_flag2, pend_flag;
-struct coines_comm_intf_config *comm_intf_config =NULL;
+struct coines_comm_intf_config *comm_intf_config = NULL;
 
 /*lint -e26 */
 #if defined(MCU_APP30)
@@ -108,58 +122,28 @@ uint8_t multi_io_map[COINES_SHUTTLE_PIN_MAX] = {
 
 uint8_t multi_io_map[COINES_SHUTTLE_PIN_MAX] = {
 
-/*To Do : To make the hearable board compatible with existing Sensor examples below pins are defined 
-          if not needed it can be removed in future */
-   [ COINES_SHUTTLE_PIN_7  ] =  GPIO_CS0,
-   [ COINES_SHUTTLE_PIN_8  ] =  INT2,
-   [ COINES_SHUTTLE_PIN_9  ] =  GPIO_1,
-   [ COINES_SHUTTLE_PIN_14 ] =  GPIO_4,
-   [ COINES_SHUTTLE_PIN_15 ] =  GPIO_2,
-   [ COINES_SHUTTLE_PIN_16 ] =  GPIO_SDI,
-   [ COINES_SHUTTLE_PIN_19 ] =  GPIO_CS1,
-   [ COINES_SHUTTLE_PIN_20 ] =  INT0,
-   [ COINES_SHUTTLE_PIN_21 ] =  INT1,
-   [ COINES_SHUTTLE_PIN_22 ] =  GPIO_3,
+    /*To Do : To make the hearable board compatible with existing Sensor examples below pins are defined
+              if not needed it can be removed in future */
+    [COINES_SHUTTLE_PIN_7] = GPIO_CS0, [COINES_SHUTTLE_PIN_8] = INT2, [COINES_SHUTTLE_PIN_9] = GPIO_1,
+    [COINES_SHUTTLE_PIN_14] = GPIO_4, [COINES_SHUTTLE_PIN_15] = GPIO_2, [COINES_SHUTTLE_PIN_16] = GPIO_SDI,
+    [COINES_SHUTTLE_PIN_19] = GPIO_CS1, [COINES_SHUTTLE_PIN_20] = INT0, [COINES_SHUTTLE_PIN_21] = INT1,
+    [COINES_SHUTTLE_PIN_22] = GPIO_3, [COINES_MINI_SHUTTLE_PIN_1_4] = INT2, [COINES_MINI_SHUTTLE_PIN_1_5] = GPIO_1,
+    [COINES_MINI_SHUTTLE_PIN_1_6] = INT0, [COINES_MINI_SHUTTLE_PIN_1_7] = INT1, [COINES_MINI_SHUTTLE_PIN_2_5] = GPIO_4,
+    [COINES_MINI_SHUTTLE_PIN_2_6] = GPIO_2, [COINES_MINI_SHUTTLE_PIN_2_1] = GPIO_CS0,
+    [COINES_MINI_SHUTTLE_PIN_2_3] = GPIO_SDO, [COINES_MINI_SHUTTLE_PIN_2_7] = GPIO_3,
+    [COINES_MINI_SHUTTLE_PIN_2_8] = GPIO_CS1,
 
-    
-   [ COINES_MINI_SHUTTLE_PIN_1_4 ]   = INT2,
-   [ COINES_MINI_SHUTTLE_PIN_1_5 ]   = GPIO_1,
-   [ COINES_MINI_SHUTTLE_PIN_1_6 ]   = INT0,
-   [ COINES_MINI_SHUTTLE_PIN_1_7 ]   = INT1,
-   [ COINES_MINI_SHUTTLE_PIN_2_5 ]   = GPIO_4,
-   [ COINES_MINI_SHUTTLE_PIN_2_6 ]   = GPIO_2,
-   [ COINES_MINI_SHUTTLE_PIN_2_1 ]   = GPIO_CS0,
-   [ COINES_MINI_SHUTTLE_PIN_2_3 ]   = GPIO_SDO       ,
-   [ COINES_MINI_SHUTTLE_PIN_2_7 ]   = GPIO_3   ,
-   [ COINES_MINI_SHUTTLE_PIN_2_8 ]   = GPIO_CS1   ,   
-   
-   /*Hearable Native Pins*/
-   [ COINES_HEARABLE_SHUTTLE_PIN_1  ]   = GPIO_1     ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_3  ]   = GPIO_2     ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_5  ]   = GPIO_3     ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_7  ]   = GPIO_4     ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_13 ]   = INT0       ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_15 ]   = INT1       ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_17 ]   = INT2       ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_8  ]   = GPIO_CS0   ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_10 ]   = GPIO_CS1   ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_12 ]   = GPIO_CS2   ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_2  ]   = GPIO_SDI   ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_4  ]   = GPIO_SDO   ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_6  ]   = GPIO_SCK   ,   
-   [ COINES_HEARABLE_SHUTTLE_PIN_14 ]   = UART_TX    ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_16 ]   = UART_RX    ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_9  ]   = I2C_SDA    ,
-   [ COINES_HEARABLE_SHUTTLE_PIN_11 ]   = I2C_SCL    ,
-
-  
-   [ COINES_SHUTTLE_PIN_SDO      ]   = GPIO_SDO   ,
-   [ COINES_HEAR3X_LED_R         ]   = MCU_LED_R  ,
-
-   [ COINES_CHRG_CD              ]   = GPIO_CHRG_CD,
-   [ COINES_CHRG_LSCTRL          ]   = GPIO_CHRG_LSCTRL
-
-
+    /*Hearable Native Pins*/
+    [COINES_HEARABLE_SHUTTLE_PIN_1] = GPIO_1, [COINES_HEARABLE_SHUTTLE_PIN_3] = GPIO_2,
+    [COINES_HEARABLE_SHUTTLE_PIN_5] = GPIO_3, [COINES_HEARABLE_SHUTTLE_PIN_7] = GPIO_4,
+    [COINES_HEARABLE_SHUTTLE_PIN_13] = INT0, [COINES_HEARABLE_SHUTTLE_PIN_15] = INT1,
+    [COINES_HEARABLE_SHUTTLE_PIN_17] = INT2, [COINES_HEARABLE_SHUTTLE_PIN_8] = GPIO_CS0,
+    [COINES_HEARABLE_SHUTTLE_PIN_10] = GPIO_CS1, [COINES_HEARABLE_SHUTTLE_PIN_12] = GPIO_CS2,
+    [COINES_HEARABLE_SHUTTLE_PIN_2] = GPIO_SDI, [COINES_HEARABLE_SHUTTLE_PIN_4] = GPIO_SDO,
+    [COINES_HEARABLE_SHUTTLE_PIN_6] = GPIO_SCK, [COINES_HEARABLE_SHUTTLE_PIN_14] = UART_TX,
+    [COINES_HEARABLE_SHUTTLE_PIN_16] = UART_RX, [COINES_HEARABLE_SHUTTLE_PIN_9] = I2C_SDA,
+    [COINES_HEARABLE_SHUTTLE_PIN_11] = I2C_SCL, [COINES_SHUTTLE_PIN_SDO] = GPIO_SDO, [COINES_HEAR3X_LED_R] = MCU_LED_R,
+    [COINES_CHRG_CD] = GPIO_CHRG_CD, [COINES_CHRG_LSCTRL] = GPIO_CHRG_LSCTRL
 };
 #else
 uint8_t multi_io_map[COINES_SHUTTLE_PIN_MAX] = {
@@ -211,9 +195,9 @@ nrf_drv_i2s_buffers_t const next_buffers = {
 struct bq_dev pmic_dev =
 { .cd_pin_state = 1, .i2c_address = BQ_DRV_ADDR, .read = common_i2c_read, .write = common_i2c_write,
   .delay_ms = common_delay_ms, .cd_set = common_pmic_cd_set, .battery_connected = 0 };
-static volatile uint8_t pmic_battery_percent = 0;
 void pmic_cyclic_reading(void);
 void pmic_check_battery_and_faults(struct bq_dev *dev, struct fault_mask_reg *fault_state);
+
 #endif
 
 #if defined(MCU_APP30)
@@ -283,8 +267,8 @@ ret_code_t adc_configure(void)
 }
 #endif
 
-
 #if defined(MCU_HEAR3X)
+
 /*!
  * @brief  Callback to read temperature data
  *
@@ -300,6 +284,7 @@ static void temp_data_read_callback(void * data, uint8_t *length)
     *(float*)data = 0.0f;
 }
 #else
+
 /*!
  * @brief  Callback to read temperature data
  *
@@ -323,6 +308,7 @@ static void temp_data_read_callback(void * data, uint8_t *length)
     }
 }
 #endif
+
 /*!
  * @brief       : API to check communication port connection
  */
@@ -358,14 +344,24 @@ void check_com_port_connection(int set)
         else if (baud_rate == 2400)
         {
 #if defined(MCU_APP30) || defined(MCU_HEAR3X)
-            APP_START_ADDR = 0x28000 ; /*Jump to USB MTP Firmware */
+            APP_START_ADDR = 0x28000;  /*Jump to USB MTP Firmware */
 #else
-            APP_START_ADDR = 0xE3800; /*Jump to USB MTP Firmware */
+            APP_START_ADDR = 0xE4000; /*Jump to USB MTP Firmware */
 #endif
         }
 
         memcpy(MAGIC_INFO_ADDR, "COIN", 4); /*Write magic string "COIN" */
         nrf_delay_ms(100);
+        
+        /* This is required because:
+        * - The WDT, once started, cannot be stopped.
+        * - The WDT continues running even after NVIC_SystemReset().
+        * - Bootloader or MTP firmware may be entered directly or through a soft reset,
+        *   and must feed the WDT only if it was already enabled by the Application. Therefore, the WDT must be fed before invoking NVIC_SystemReset().
+        */
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+        coines_watchdog_feed();
+#endif
         NVIC_SystemReset();
     }
 }
@@ -402,10 +398,11 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst, app_us
             break;
         case APP_USBD_CDC_ACM_USER_EVT_TX_DONE:
             tx_pending = false;
-			if ((comm_intf_config) && (comm_intf_config->intf_tx_complete_callback))
-			{
-				comm_intf_config->intf_tx_complete_callback();
-			}
+            if ((comm_intf_config) && (comm_intf_config->intf_tx_complete_callback))
+            {
+                comm_intf_config->intf_tx_complete_callback();
+            }
+
             break;
         case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
         {
@@ -425,10 +422,11 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst, app_us
 
                 ret = app_usbd_cdc_acm_read(&m_app_cdc_acm, &temp_rx, 1);
             } while (ret == NRF_SUCCESS);
-			if ((comm_intf_config) &&(comm_intf_config->intf_rx_complete_callback))
-			{
-				comm_intf_config->intf_rx_complete_callback();
-			}
+            if ((comm_intf_config) && (comm_intf_config->intf_rx_complete_callback))
+            {
+                comm_intf_config->intf_rx_complete_callback();
+            }
+
             break;
         }
         default:
@@ -467,11 +465,13 @@ static uint32_t external_flash_init(void)
             {
                 (void)w25n01gw_mass_erase();
             }
+
 #else
             if (W25N02KW_DEVICE_ID == info.device_id)
             {
                 (void)w25n02kw_mass_erase();
             }
+
 #endif
             else
             {
@@ -482,7 +482,9 @@ static uint32_t external_flash_init(void)
             (void)flogfs_mount();
         }
     }
+
     coines_spi_twi_instances[SPIM2_INSTANCE] = COINES_ENABLE;
+
     return ret_status;
 }
 
@@ -539,41 +541,9 @@ static void timer_handler(nrf_timer_event_t event_type, void* p_context)
 
 #if defined(MCU_APP31)
 
-/*!
- * @brief Callback for VIN detection
- */
-void vin_detection_cb(uint32_t param1, uint32_t param2)
+void mr_button_reset_timeout_handler(void *p_context)
 {
-    (void)param1;
-    (void)param2;
-    enum coines_pin_direction pindirection;
-    enum coines_pin_value pinvalue;
-
-    coines_get_pin_config(COINES_APP31_VIN_DEC, &pindirection, &pinvalue);
-    if (pinvalue == COINES_PIN_VALUE_HIGH)
-    {
-        /* Vin plugged => Activate charging */
-        (void)bq_charge_enable(&pmic_dev);
-    }
-    else if (pinvalue == COINES_PIN_VALUE_LOW)
-    {
-        /* Vin unplugged => Deactivate charging */
-        (void)bq_charge_disable(&pmic_dev);
-    }
-}
-
-/*!
- * @brief Callback for Reset interrupt
- */
-void power_interrupt_cb(uint32_t param1, uint32_t param2)
-{
-    /*
-     * 1 : Wake 2 event occured : Press > 1500ms
-     * 2 : Wake 1 event occured : Press > 80ms
-     * 3 : Both Wake 1 and Wake 2 occured
-     */
-    (void)param1;
-    (void)param2;
+    (void)p_context;
     uint8_t event = 0xFF;
     struct fault_mask_reg faults;
     enum coines_pin_direction pin_direction;
@@ -608,6 +578,51 @@ void power_interrupt_cb(uint32_t param1, uint32_t param2)
         pmic_check_battery_and_faults(&pmic_dev, &faults);
     }
 }
+
+void usb_vin_detection_timeout_handler(void *p_context)
+{
+    (void)p_context;
+    enum coines_pin_direction pindirection;
+    enum coines_pin_value pinvalue;
+
+    coines_get_pin_config(COINES_APP31_VIN_DEC, &pindirection, &pinvalue);
+    if (pinvalue == COINES_PIN_VALUE_HIGH)
+    {
+        /* Vin plugged => Activate charging */
+        (void)bq_charge_enable(&pmic_dev);
+    }
+    else if (pinvalue == COINES_PIN_VALUE_LOW)
+    {
+        /* Vin unplugged => Deactivate charging */
+        (void)bq_charge_disable(&pmic_dev);
+    }
+}
+
+/*!
+ * @brief Callback for VIN detection
+ */
+void vin_detection_cb(uint32_t param1, uint32_t param2)
+{
+    (void)param1;
+    (void)param2;
+    (void)app_timer_start(usb_vin_detection_timer_id, READ_INTERVAL, NULL);
+}
+
+/*!
+ * @brief Callback for Reset interrupt
+ */
+void power_interrupt_cb(uint32_t param1, uint32_t param2)
+{
+    /*
+     * 1 : Wake 2 event occured : Press > 1500ms
+     * 2 : Wake 1 event occured : Press > 80ms
+     * 3 : Both Wake 1 and Wake 2 occured
+     */
+    (void)param1;
+    (void)param2;
+    (void)app_timer_start(mr_button_reset_timer_id, READ_INTERVAL, NULL);
+
+}
 #endif
 
 #if defined(MCU_APP31) || defined(MCU_HEAR3X)
@@ -636,14 +651,17 @@ void pmic_check_battery_and_faults(struct bq_dev *dev, struct fault_mask_reg *fa
     {
         /* Disable IPREM/TERM Current */
         prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
-        prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA; /* 10% of Max charging current = 15mA */
-        prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
+        prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA; /* 10% of Max charging current =
+                                                                                     * 15mA */
+        prechrg_cfg.term_state = BQ_ITERM_DISABLE;
         (void)bq_set_term_precharge_current(&pmic_dev, prechrg_cfg);
-#ifdef PRE_CHARGE_EN
+#if PRE_CHARGE_EN
+
         /* lint -e715 */
         dev->battery_connected = 0;
 #endif
     }
+
 #if defined(MCU_APP31)
     else if ((pin_value == COINES_PIN_VALUE_HIGH) && (fault_state->bat_uvlo == 0)) /* Battery connected */
 #elif defined(MCU_HEAR3X)
@@ -652,10 +670,12 @@ void pmic_check_battery_and_faults(struct bq_dev *dev, struct fault_mask_reg *fa
     {
         /* Enable IPREM/TERM Current */
         prechrg_cfg.range = BQ_IPRETERM_RANGE_6_37_MA;
-        prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA; /* 10% of Max charging current = 15mA */
+        prechrg_cfg.code = BQ_IPRETERM_CURRENT_1_2_MA | BQ_IPRETERM_CURRENT_4_8_MA; /* 10% of Max charging current =
+                                                                                     * 15mA */
         prechrg_cfg.term_state = PRECHRG_CFG_TERM_STATE;
         (void)bq_set_term_precharge_current(&pmic_dev, prechrg_cfg);
-#ifdef PRE_CHARGE_EN
+#if PRE_CHARGE_EN
+
         /* lint -e715 */
         dev->battery_connected = 1;
 #endif
@@ -676,13 +696,14 @@ void coines_get_device_ficr(uint64_t * devid)
     devid[1] = (uint64_t) device_id1;
 }
 
-#if defined(MCU_APP31) ||  defined(MCU_HEAR3X)
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+
 /*!
  * @brief Sets a flag to indicate that a dummy PMIC read is pending.
  */
-void pmic_cyclic_dummy_read_handler(void)
+void __attribute__((weak)) pmic_cyclic_dummy_read_handler(void)
 {
-    pmic_dummy_read_pending = true;   
+    pmic_dummy_read_pending = true;
 }
 
 /*!
@@ -691,19 +712,21 @@ void pmic_cyclic_dummy_read_handler(void)
 void pmic_dummy_read(void)
 {
     uint8_t read_data = 0;
+
     if (pmic_dummy_read_pending)
     {
         pmic_dummy_read_pending = false;
         (void)bq_read_reg(BQ_STATUS_AND_MODE_CTRL_REG, &read_data, 1, &pmic_dev);
-    } 
+        coines_watchdog_feed();
+    }
 }
 
 /*!
  * @brief Switches the PMIC cyclic read mode between actual read and dummy read.
  *
- * This function stops the current PMIC cyclic read timer, reconfigures it with the appropriate 
- * handler (either for actual cyclic reading or dummy reading), and restarts the timer. 
- * The dummy read mode is used to prevent the watchdog timer from resetting when actual 
+ * This function stops the current PMIC cyclic read timer, reconfigures it with the appropriate
+ * handler (either for actual cyclic reading or dummy reading), and restarts the timer.
+ * The dummy read mode is used to prevent the watchdog timer from resetting when actual
  * PMIC reading is not required.
  *
  * @param[in] read_type : Specifies the type of PMIC cyclic read to perform.
@@ -712,7 +735,7 @@ void pmic_dummy_read(void)
  *
  * @return None
  */
-int8_t switch_pmic_cyclic_read(enum coines_pmic_read_type read_type)  
+int8_t switch_pmic_cyclic_read(enum coines_pmic_read_type read_type)
 {
     void (*pmic_read_handler)(void);
 
@@ -720,12 +743,13 @@ int8_t switch_pmic_cyclic_read(enum coines_pmic_read_type read_type)
     {
         return COINES_E_FAILURE;
     }
-    
+
     if (read_type == COINES_PMIC_CYCLIC_READ)
     {
         pmic_dummy_read();
     }
-    else{
+    else
+    {
         pmic_cyclic_reading();
     }
 
@@ -737,7 +761,7 @@ int8_t switch_pmic_cyclic_read(enum coines_pmic_read_type read_type)
     {
         pmic_read_handler = pmic_cyclic_reading;
     }
-    
+
     /* Stop pmic_cyclic read timer and re-intialize with handler */
     (void)coines_timer_stop(COINES_TIMER_INSTANCE_1);
     (void)coines_timer_deconfig(COINES_TIMER_INSTANCE_1);
@@ -754,45 +778,19 @@ int8_t switch_pmic_cyclic_read(enum coines_pmic_read_type read_type)
 }
 
 /*!
- * @brief Function to get last obtained value of the battery level in percent.
- */
-uint8_t pmic_pull_battery_level(void)
-{
-    return pmic_battery_percent;
-}
-
-/*!
  * @brief Callback for pmic reading Timer Instance 1
  */
 void pmic_cyclic_reading(void)
 {
-    uint8_t bat_vbbm = 0;
-
-    struct fault_mask_reg faults;
-
-    /*update battery percentage*/
-    battery_meas_rslt = bq_get_battery_voltage(&pmic_dev, &bat_vbbm); /*Voltage Based Battery Monitor */
-    if (BQ_OK == battery_meas_rslt)
-    {
-        batt_status_in_milli_volts = (uint16_t) (((bat_vbbm * 4.2) / 100.0) * 1000.0); /*Convert VBMON percentage to
-         * voltage => Volt = VBMON *
-         * VBATREG */
-        pmic_battery_percent = battery_level_in_percentage(batt_status_in_milli_volts);
-    }
-    else{
-        battery_meas_rslt = COINES_E_FAILURE;
-    }
-
-    /*Check battery and get faults*/
-    if (pmic_dev.battery_connected == 0)
-    {
-        pmic_check_battery_and_faults(&pmic_dev, &faults);
-    }
+    /* At least one read operation (any register) is required periodically to prevent the watchdog reset. */
+    (void)bq_get_status(&pmic_dev, &bq_state);
+    coines_watchdog_feed();
 }
 
 #endif
 
-#if defined(MCU_APP31) ||  defined(MCU_APP30)
+#if defined(MCU_APP31) || defined(MCU_APP30)
+
 /*!
  * @brief Initializes the EEPROM and reads shuttle config
  */
@@ -833,6 +831,7 @@ void ble_service_enable(void)
         .temp_read_callback = temp_data_read_callback, .batt_status_read_callback = bat_status_read_callback,
         .data_rx_callback = NULL, .adv_name = ble_device_name, .tx_power = (int8_t)ble_tx_power
     };
+
     ble_service_init(&init_handle);
 }
 
@@ -854,11 +853,14 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
         .temp_read_callback = temp_data_read_callback, .batt_status_read_callback = bat_status_read_callback,
         .data_rx_callback = NULL, .adv_name = ble_device_name, .tx_power = (int8_t)ble_tx_power
     };
+
     if (arg != NULL)
     {
         comm_intf_config = (struct coines_comm_intf_config *)arg;
         init_handle.data_rx_callback = comm_intf_config->intf_rx_complete_callback;
+        init_handle.data_tx_callback = comm_intf_config->intf_tx_complete_callback;
     }
+
     /* Initialize the low frequency clock */
     if (NRFX_SUCCESS != nrf_drv_clock_init())
     {
@@ -876,7 +878,9 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
 
     while (!nrf_drv_clock_lfclk_is_running() && !nrf_drv_clock_hfclk_is_running())
         ;
-#if defined(MCU_APP31) ||  defined(MCU_APP30)
+
+#if defined(MCU_APP31) || defined(MCU_APP30)
+
     /* Initialize the EEPROM and read shuttle config */
     eeprom_init();
 #endif
@@ -1040,7 +1044,8 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
 #endif
 
 #if defined(MCU_HEAR3X)
-    coines_delay_msec(1000); 
+    coines_delay_msec(1000);
+
     /* if Reset done using PMIC button,
      Need some delay for PMIC initialisation */
 #endif
@@ -1052,6 +1057,9 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
     /* Initialize power module */
     (void)common_pmic_cd_init();
     coines_delay_msec(10);
+    /**
+     * In addition to the safety timer, the device contains a 50-second watchdog timer that monitors the host through the I2C interface.
+     */
     (void)bq_init(&pmic_dev);
     coines_delay_msec(10);
 
@@ -1072,6 +1080,7 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
         (void)bq_cd_set(&pmic_dev, 1);
         coines_delay_msec(10);
     }
+
 #if defined(MCU_APP31)
     else
 #elif defined(MCU_HEAR3X)
@@ -1084,6 +1093,8 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
 #if defined(MCU_APP31)
     coines_attach_interrupt(COINES_APP31_VIN_DEC, vin_detection_cb, COINES_PIN_INTERRUPT_CHANGE);
     coines_attach_interrupt(COINES_APP31_P_INT, power_interrupt_cb, COINES_PIN_INTERRUPT_FALLING_EDGE);
+    (void)app_timer_create(&usb_vin_detection_timer_id, APP_TIMER_MODE_SINGLE_SHOT, usb_vin_detection_timeout_handler);
+    (void)app_timer_create(&mr_button_reset_timer_id, APP_TIMER_MODE_SINGLE_SHOT, mr_button_reset_timeout_handler);
 #endif
 
     /* Initiate a battery reading */
@@ -1100,6 +1111,7 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
     }
 
 #if defined(MCU_APP31)
+
     /* Set sensor VDD and VDDIO to 0V */
     (void)coines_set_shuttleboard_vdd_vddio_config(0, 0);
 
@@ -1108,9 +1120,12 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
     (void)bq_ack_push_button_events(&pmic_dev, &ButtonAck);
 #endif
 
-    /* Set RED Led ON waiting for communication */
-    coines_set_led(COINES_LED_RED, COINES_LED_STATE_ON);
+#endif
+#if defined(MCU_APP31)|| defined(MCU_HEAR3X)
 
+/* Watchdog is configured for 35 seconds, which is within the PMIC watchdog timer limit of 50 seconds.
+ * This ensures the system watchdog triggers before the PMIC watchdog, allowing proper reset handling. */
+(void) coines_watchdog_config(35000);
 #endif
 
 #if defined(MCU_HEAR3X)
@@ -1119,8 +1134,39 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
     while (!(serial_connected || nrf_gpio_pin_read(SWITCH2) == 0 || ble_nus_connected))
 #endif
     {
-        nrf_delay_ms(100);
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+        coines_watchdog_feed();
+#endif
+        nrf_delay_ms(500);
+#if defined(MCU_APP31) || defined(MCU_HEAR3X)
+        bq_get_status(&pmic_dev, &bq_state);
+        switch (bq_state.status)
+        {
+            case BQ_STATUS_CHARGE_DONE: /* White color */
+                coines_set_led(COINES_LED_RED, COINES_LED_STATE_ON);
+                coines_set_led(COINES_LED_GREEN, COINES_LED_STATE_ON);
+                coines_set_led(COINES_LED_BLUE, COINES_LED_STATE_ON);
+                break;
+
+            case BQ_STATUS_CHARGE_IN_PROGRESS: /* Magenta color */
+                coines_set_led(COINES_LED_RED, COINES_LED_STATE_ON);
+                coines_set_led(COINES_LED_GREEN, COINES_LED_STATE_OFF);
+                coines_set_led(COINES_LED_BLUE, COINES_LED_STATE_ON);
+                break;
+
+            default: /* Red color */
+                coines_set_led(COINES_LED_RED, COINES_LED_STATE_ON);
+                coines_set_led(COINES_LED_GREEN, COINES_LED_STATE_OFF);
+                coines_set_led(COINES_LED_BLUE, COINES_LED_STATE_OFF);
+                break;
+        }
+#endif
     }
+
+    /* Set RED Led ON when communication is established */
+    coines_set_led(COINES_LED_RED, COINES_LED_STATE_ON);
+    coines_set_led(COINES_LED_BLUE, COINES_LED_STATE_OFF);
+    coines_set_led(COINES_LED_GREEN, COINES_LED_STATE_OFF);
 
     return COINES_SUCCESS;
 }
@@ -1181,7 +1227,7 @@ int16_t coines_get_pin_config(enum coines_multi_io_pin pin_number,
 
         if (pin_value != NULL)
         {
-            if(pin_dir == COINES_PIN_DIRECTION_IN)
+            if (pin_dir == COINES_PIN_DIRECTION_IN)
             {
                 *pin_value = (enum coines_pin_value)nrf_gpio_pin_read(pin_num);
             }
@@ -1360,6 +1406,7 @@ void coines_write_intf(enum coines_comm_intf intf, void *buffer, uint16_t len)
     {
         /* Wait for previous transfer to complete */
         while (tx_pending);
+
         tx_pending = true;
         (void)app_usbd_cdc_acm_write(&m_app_cdc_acm, buffer, len);
         while (tx_pending)
@@ -1376,6 +1423,7 @@ void coines_write_intf(enum coines_comm_intf intf, void *buffer, uint16_t len)
 uint16_t coines_write_intf_non_block(enum coines_comm_intf intf, void *buffer, uint16_t len)
 {
     uint16_t transferred_len = 0;
+
     if ((intf == COINES_COMM_INTF_USB) && (serial_connected))
     {
         if (tx_pending == false)
@@ -1389,9 +1437,11 @@ uint16_t coines_write_intf_non_block(enum coines_comm_intf intf, void *buffer, u
     else if (intf == COINES_COMM_INTF_BLE)
     {
         transferred_len = (len > BLE_MTU) ? BLE_MTU : len;
+
         /* Send the payload via the BLE service */
         transferred_len = ble_service_nus_write(buffer, transferred_len);
     }
+
     return transferred_len;
 }
 
@@ -1722,7 +1772,7 @@ int closedir(DIR *dirp)
 
     return 0;
 }
-#if (defined(MCU_APP30)||defined(MCU_APP31))
+#if (defined(MCU_APP30) || defined(MCU_APP31))
 
 /*!
  * @brief This API is used to read the temperature sensor data.
@@ -1780,6 +1830,7 @@ int16_t coines_read_temp_data(float *temp_data)
     return rslt;
 }
 #endif
+
 /*!
  * @brief This API is used to read the battery status .
  *
@@ -1794,11 +1845,12 @@ int16_t coines_read_temp_data(float *temp_data)
 int16_t coines_read_bat_status(uint16_t *bat_status_mv, uint8_t *bat_status_percent)
 {
 #if defined(MCU_APP30)
+    int16_t rslt;
     coines_adc_transfer_done = false;
 
-    battery_meas_rslt = nrfx_saadc_sample();
+    rslt = nrfx_saadc_sample();
 
-    if (NRFX_SUCCESS == battery_meas_rslt)
+    if (NRFX_SUCCESS == rslt)
     {
         while (!coines_adc_transfer_done)
             ;
@@ -1811,10 +1863,14 @@ int16_t coines_read_bat_status(uint16_t *bat_status_mv, uint8_t *bat_status_perc
 
     return COINES_E_FAILURE;
 #else
-    *bat_status_percent = pmic_battery_percent;
-    *bat_status_mv = batt_status_in_milli_volts;
+    int8_t rslt;
+    rslt = bq_get_battery_status(&pmic_dev, bat_status_mv, bat_status_percent);
+    if (rslt != BQ_OK)
+    {
+        return COINES_E_FAILURE;
+    }
 
-    return battery_meas_rslt;
+    return COINES_SUCCESS;
 #endif
 }
 
@@ -1936,6 +1992,7 @@ int16_t coines_set_led(enum coines_led led, enum coines_led_state led_state)
 #endif
 
 #if defined(MCU_APP31) || defined(MCU_HEAR3X)
+
 /*!
  * @brief This API is used to switch off the board
  */
@@ -1984,10 +2041,32 @@ int16_t coines_set_shuttleboard_vdd_vddio_config(uint16_t vdd_millivolt, uint16_
     return COINES_SUCCESS;
 }
 #elif defined(MCU_APP31)
+static int16_t verify_ldo_configuration(struct bq_load_switch curr_ldocfg)
+{
+    uint8_t retry = MAX_LDO_READ_RETRIES;
+    uint8_t read_ldocfg;
+
+    while (retry--)
+    {
+        (void)bq_get_load_ldo(&pmic_dev, &read_ldocfg);
+
+        if (BQ_READ_ENABLE_BIT(read_ldocfg) == BQ_READ_ENABLE_BIT(curr_ldocfg.enable) &&
+            BQ_READ_CODE_BITS(read_ldocfg) == BQ_READ_CODE_BITS(curr_ldocfg.code) &&
+            BQ_READ_RESET_BIT(read_ldocfg) == BQ_READ_RESET_BIT(curr_ldocfg.reset))
+        {
+            return COINES_SUCCESS;
+        }
+
+        coines_delay_usec(500);
+    }
+
+    return COINES_E_VDD_CONFIG_FAILED;
+}
+
 int16_t coines_set_shuttleboard_vdd_vddio_config(uint16_t vdd_millivolt, uint16_t vddio_millivolt)
 {
-    struct bq_load_switch ldocfg;
-    struct bq_sys_vout syscfg;
+    struct bq_load_switch ldocfg = { 0 };
+    struct bq_sys_vout syscfg = { 0 };
     uint8_t lscode = 0;
     uint8_t syscode = 0;
     uint8_t readldocfg = 0;
@@ -1996,11 +2075,12 @@ int16_t coines_set_shuttleboard_vdd_vddio_config(uint16_t vdd_millivolt, uint16_
 
     ldocfg.reset = BQ_LOAD_LDO_RESET_TIME;
 
+    /* ---------- VDD (LDO) ---------- */
     if (vdd_millivolt > 0 && vdd_millivolt < 1800)
     {
         return COINES_E_VDD_CONFIG_FAILED;
     }
-    else if(vdd_millivolt == 0)
+    else if (vdd_millivolt == 0)
     {
         nrf_gpio_pin_write(CHRG_LSCTRL, 0);
         nrf_gpio_pin_write(VDD_EN, 0);
@@ -2009,60 +2089,87 @@ int16_t coines_set_shuttleboard_vdd_vddio_config(uint16_t vdd_millivolt, uint16_
     }
     else
     {
-        vdd_millivolt = (vdd_millivolt > 3300)?3300:vdd_millivolt; /*3300mV Maximum */
+        /* Clamp to max 3300 mV */
+        vdd_millivolt = (vdd_millivolt > 3300) ? 3300 : vdd_millivolt;
 
-        /* Read the configured VDD. If the passed vdd_millivolt and the read vdd_millivolt are the same, skip the configuration.*/
-        ldocfg.enable = BQ_LOAD_LDO_ENABLE;
-        ret = bq_set_load_ldo(&pmic_dev, ldocfg);
+        /* Read current VDD */
         (void)bq_get_load_ldo(&pmic_dev, &readldocfg);
-        current_vdd_mv = bq_get_ldo_voltage(readldocfg); //Read voltage will be -800mV
+        current_vdd_mv = bq_get_ldo_voltage(readldocfg);
 
-        if (current_vdd_mv == (vdd_millivolt - 800))
+        if (current_vdd_mv != (vdd_millivolt - 800))
         {
-            return COINES_SUCCESS;
+            /* Disable LDO before changing voltage */
+            nrf_gpio_pin_write(CHRG_LSCTRL, 0);
+            nrf_gpio_pin_write(VDD_EN, 0);
+            ldocfg.enable = BQ_LOAD_LDO_DISABLE;
+            (void)bq_set_load_ldo(&pmic_dev, ldocfg);
+
+            /* Set new LDO output voltage */
+            lscode = (uint8_t)((vdd_millivolt - 800) / 100);
+
+            /* Clamp: max 3.3 V → (3300 - 800)/100 = 25 steps (0..25 valid) */
+            if (lscode > 25)
+            {
+                lscode = 25;
+            }
+
+            memset(&ldocfg, 0, sizeof(ldocfg));
+            ldocfg.code = lscode << 2; /* LS_LDO code starts at Bit2 */
+            ldocfg.enable = BQ_LOAD_LDO_ENABLE;
+            ret = bq_set_load_ldo(&pmic_dev, ldocfg);
+
+            if (verify_ldo_configuration(ldocfg) != COINES_SUCCESS)
+            {
+                return COINES_E_VDD_CONFIG_FAILED;
+            }
+
+            nrf_gpio_pin_write(CHRG_LSCTRL, 1);
+            nrf_gpio_pin_write(VDD_EN, 1);
         }
-
-        /*We should disable the LDO output before changing the output voltage */
-        nrf_gpio_pin_write(CHRG_LSCTRL, 0);
-        nrf_gpio_pin_write(VDD_EN, 0);
-        ldocfg.enable = BQ_LOAD_LDO_DISABLE;
-        (void)bq_set_load_ldo(&pmic_dev, ldocfg);
-
-        /*Setting the new LDO output voltage */
-        lscode = (uint8_t) ((vdd_millivolt - 800) / 100); /*Output voltage = 0,8V + Ls_LDOCODE x 100mV */
-        ldocfg.code = lscode << 2; /*LS_LDO code start from Bit2 */
-        ldocfg.enable = BQ_LOAD_LDO_ENABLE;
-        ret = bq_set_load_ldo(&pmic_dev, ldocfg);
-        nrf_gpio_pin_write(CHRG_LSCTRL, 1);
-        nrf_gpio_pin_write(VDD_EN, 1);
     }
 
+    /* ---------- VDDIO (SYS VOUT) ---------- */
     if (vddio_millivolt > 0 && vddio_millivolt < 1800)
     {
         return COINES_E_VDDIO_CONFIG_FAILED;
     }
-    else if(vddio_millivolt == 0)
+    else if (vddio_millivolt == 0)
     {
         nrf_gpio_pin_write(VDDIO_EN, 0);
     }
     else
     {
-        vddio_millivolt = (vddio_millivolt > 3300)?3300:vddio_millivolt; /*3300mV Maximum */
+        /* Clamp to max 3300 mV */
+        vddio_millivolt = (vddio_millivolt > 3300) ? 3300 : vddio_millivolt;
 
         if ((vddio_millivolt >= 1800) && (vddio_millivolt <= 2800))
         {
             syscfg.sys_select = BQ_SYS_VOUT_SEL_1;
-            syscode = (uint8_t) ((vddio_millivolt - 1300) / 100); /*Output voltage = 1,3V + SysVoutCODE x 100mV */
+            syscode = (uint8_t)((vddio_millivolt - 1300) / 100);
+
+            /* Clamp to max 2.8 V → (2800 - 1300)/100 = 15 steps */
+            if (syscode > 15)
+            {
+                syscode = 15;
+            }
         }
         else if ((vddio_millivolt > 2800) && (vddio_millivolt <= 3300))
         {
             syscfg.sys_select = BQ_SYS_VOUT_SEL_3;
-            syscode = (uint8_t) ((vddio_millivolt - 1800) / 100); /*Output voltage = 1,8V + SysVoutCODE x 100mV */
+            syscode = (uint8_t)((vddio_millivolt - 1800) / 100);
+
+            /* Clamp to max 3.3 V → (3300 - 1800)/100 = 15 steps,
+               but only 0..5 are valid for SYS_SEL=3 */
+            if (syscode > 5)
+            {
+                syscode = 5;
+            }
         }
 
-        syscfg.code = syscode << 1; /*SYS_VOUT code start from Bit1 */
+        syscfg.code = syscode << 1; /* SYS_VOUT code starts from Bit1 */
         syscfg.enable = BQ_SYS_VOUT_ENABLE;
         (void)bq_set_sys_vout(&pmic_dev, syscfg);
+
         nrf_gpio_pin_write(VDDIO_EN, 1);
     }
 
@@ -2101,8 +2208,8 @@ uint64_t coines_get_micro_sec(void)
     {
         pend_flag = pend_flag2;
         pend_flag2 = !!((SCB->ICSR & SCB_ICSR_PENDSTSET_Msk) || ((SCB->SHCSR & SCB_SHCSR_SYSTICKACT_Msk)));
-        // Handle systick rollover
-        if(systick_count < SysTick->VAL)
+        /* Handle systick rollover */
+        if (systick_count < SysTick->VAL)
         {
             millis_count = coines_get_millis();
             systick_count = SysTick->VAL;

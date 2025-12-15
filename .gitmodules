@@ -16,4 +16,3 @@
 [submodule "examples/bma530"]
 	path = examples/bma530
 	url = https://github.com/boschsensortec/BMA530_SensorAPI.git
-

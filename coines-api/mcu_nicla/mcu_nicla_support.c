@@ -247,7 +247,10 @@ int16_t coines_get_board_info(struct coines_board_info *data)
  */
 void bat_status_read_callback(void)
 {
-	(void) ble_service_battery_level_update(pmic_pull_battery_level(), 1);
+    uint16_t bat_status_mv = 0;
+    uint8_t bat_status_percent = 0;
+    (void) coines_read_bat_status(&bat_status_mv, &bat_status_percent);
+	(void) ble_service_battery_level_update(bat_status_percent, 1);
 }
 
 static uint64_t get_rtc_ticks(void)
