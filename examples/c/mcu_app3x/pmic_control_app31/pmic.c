@@ -1,6 +1,6 @@
 /**\
  *
- * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2026 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -44,6 +44,7 @@ extern bool serial_connected;
 int main(void)
 {
     struct bq_status bqstatus = { 0, 0, 0, 0, 0, 0 };
+    char bq_status_str[4][20] = { "Ready", "Charge in progress", "Charge done", "Fault" };
     struct fault_mask_reg faults = { 0, 0, 0, 0 };
     uint16_t bat_status_mv = 0;
     uint8_t bat_status_percent = 0;
@@ -83,25 +84,41 @@ int main(void)
 
         if (ble_nus_connected)
         {
-            fprintf(bt_w, "BQ status = %d\r\n", bqstatus.status);
-            fprintf(bt_w, "BQ CD line = %d\r\n", bqstatus.cd_status);
-            fprintf(bt_w, "BQ fault = \r\n");
-            fprintf(bt_w, "BQ fault VIN OV = %d\r\n", faults.vin_ov);
-            fprintf(bt_w, "BQ fault VIN UV = %d\r\n", faults.vin_uv);
-            fprintf(bt_w, "BQ fault BAT UVLO = %d\r\n", faults.bat_uvlo);
-            fprintf(bt_w, "BQ fault BAT OCP = %d\r\n", faults.bat_ocp);
+            if(bqstatus.status < 4)
+            {
+                fprintf(bt_w, "BQ status = %s\r\n", bq_status_str[bqstatus.status]);
+            }
+            else
+            {
+                fprintf(bt_w, "BQ status = %d\r\n", bqstatus.status);
+            }
+            
+            fprintf(bt_w, "BQ CD line = %s\r\n", bqstatus.cd_status ? "Disabled" : "Enabled");
+            fprintf(bt_w, "BQ faults\r\n");
+            fprintf(bt_w, "\tVIN OV = %s\r\n", faults.vin_ov ? "Overvoltage" : "Normal");
+            fprintf(bt_w, "\tVIN UV = %s\r\n", faults.vin_uv ? "Undervoltage" : "Normal");
+            fprintf(bt_w, "\tBAT UVLO = %s\r\n", faults.bat_uvlo ? "Undervoltage" : "Normal");
+            fprintf(bt_w, "\tBAT OCP = %s\r\n", faults.bat_ocp ? "Overcurrent" : "Normal");
             fprintf(bt_w, "BQ Battery level in percentage = %d %% \r\n", bat_status_percent);
             fprintf(bt_w, "BQ Battery voltage in mV = %d mV\r\n", bat_status_mv);
         }
         else // serial_connected
         {
-            printf("BQ status = %d\r\n", bqstatus.status);
-            printf("BQ CD line = %d\r\n", bqstatus.cd_status);
-            printf("BQ fault = \r\n");
-            printf("BQ fault VIN OV = %d\r\n", faults.vin_ov);
-            printf("BQ fault VIN UV = %d\r\n", faults.vin_uv);
-            printf("BQ fault BAT UVLO = %d\r\n", faults.bat_uvlo);
-            printf("BQ fault BAT OCP = %d\r\n", faults.bat_ocp);
+            if(bqstatus.status < 4)
+            {
+                printf("BQ status = %s\r\n", bq_status_str[bqstatus.status]);
+            }
+            else
+            {
+                printf("BQ status = %d\r\n", bqstatus.status);
+            }
+            
+            printf("BQ CD line = %s\r\n", bqstatus.cd_status ? "Disabled" : "Enabled");
+            printf("BQ faults\r\n");
+            printf("\tVIN OV = %s\r\n", faults.vin_ov ? "Overvoltage" : "Normal");
+            printf("\tVIN UV = %s\r\n", faults.vin_uv ? "Undervoltage" : "Normal");
+            printf("\tBAT UVLO = %s\r\n", faults.bat_uvlo ? "Undervoltage" : "Normal");
+            printf("\tBAT OCP = %s\r\n", faults.bat_ocp ? "Overcurrent" : "Normal");
             printf("BQ Battery level in percentage = %d %% \r\n", bat_status_percent);
             printf("BQ Battery voltage in mV = %d mV\r\n", bat_status_mv);
         }

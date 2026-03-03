@@ -81,6 +81,7 @@ static uint8_t temp_rx;
 
 #if defined(MCU_APP31) || defined(MCU_HEAR3X)
 static struct bq_status bq_state;
+static struct fault_mask_reg faults;
 #endif
 
 volatile bool ble_nus_connected = false;
@@ -545,7 +546,6 @@ void mr_button_reset_timeout_handler(void *p_context)
 {
     (void)p_context;
     uint8_t event = 0xFF;
-    struct fault_mask_reg faults;
     enum coines_pin_direction pin_direction;
     enum coines_pin_value pin_value;
 
@@ -717,6 +717,18 @@ void pmic_dummy_read(void)
     {
         pmic_dummy_read_pending = false;
         (void)bq_read_reg(BQ_STATUS_AND_MODE_CTRL_REG, &read_data, 1, &pmic_dev);
+#if defined(MCU_HEAR3X)
+    (void)bq_get_faults(&pmic_dev, &faults);
+
+    if((faults.vin_uv == 0) && (bq_state.status == 0)) /* Enable charging if there is sufficient input voltage and BQ status is ready */
+    {
+        bq_charge_enable(&pmic_dev);
+    }
+    else if(faults.vin_uv == 1) /* Disable charging if insuffcient voltage */
+    {
+        bq_charge_disable(&pmic_dev);
+    }
+#endif
         coines_watchdog_feed();
     }
 }
@@ -784,6 +796,18 @@ void pmic_cyclic_reading(void)
 {
     /* At least one read operation (any register) is required periodically to prevent the watchdog reset. */
     (void)bq_get_status(&pmic_dev, &bq_state);
+#if defined(MCU_HEAR3X)
+    (void)bq_get_faults(&pmic_dev, &faults);
+
+    if((faults.vin_uv == 0) && (bq_state.status == 0)) /* Enable charging if there is sufficient input voltage and BQ status is ready */
+    {
+        bq_charge_enable(&pmic_dev);
+    }
+    else if(faults.vin_uv == 1) /* Disable charging if insuffcient voltage */
+    {
+        bq_charge_disable(&pmic_dev);
+    }
+#endif
     coines_watchdog_feed();
 }
 
@@ -1069,8 +1093,7 @@ int16_t coines_open_comm_intf(enum coines_comm_intf intf_type, void *arg)
     (void)coines_get_pin_config(COINES_APP31_VIN_DEC, &pin_direction, &pin_value);
     if (pin_value == COINES_PIN_VALUE_LOW)
 #elif defined(MCU_HEAR3X)
-    struct fault_mask_reg faults;
-    bq_get_faults(&pmic_dev, &faults);
+    (void)bq_get_faults(&pmic_dev, &faults);
     if (faults.vin_uv == 1)
 #endif
     {
@@ -2086,6 +2109,10 @@ int16_t coines_set_shuttleboard_vdd_vddio_config(uint16_t vdd_millivolt, uint16_
         nrf_gpio_pin_write(VDD_EN, 0);
         ldocfg.enable = BQ_LOAD_LDO_DISABLE;
         ret = bq_set_load_ldo(&pmic_dev, ldocfg);
+        if(ret == BQ_OK)
+        {
+            ret = bq_set_load_ldo(&pmic_dev, ldocfg); // Ensure the ldocfg.code is set to 0
+        }
     }
     else
     {
@@ -2159,10 +2186,10 @@ int16_t coines_set_shuttleboard_vdd_vddio_config(uint16_t vdd_millivolt, uint16_
             syscode = (uint8_t)((vddio_millivolt - 1800) / 100);
 
             /* Clamp to max 3.3 V → (3300 - 1800)/100 = 15 steps,
-               but only 0..5 are valid for SYS_SEL=3 */
-            if (syscode > 5)
+               but only 0..15 are valid for SYS_SEL=3 */
+            if (syscode > 15)
             {
-                syscode = 5;
+                syscode = 15;
             }
         }
 

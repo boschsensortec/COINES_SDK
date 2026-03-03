@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "coinespy"
-version = "1.0.6"
+version = "1.0.7"
 authors = [
   { name="Bosch Sensortec GmbH", email="contact@bosch-sensortec.com" },
 ]

@@ -1,3 +1,8 @@
+COINES_SDK v2.12.2 - (27-01-2026)
+
+Updates
+* Resolved issue where configuring VDDIO in the 2.8–3.3V range resulted in it being clamped at 2.3V instead of reaching the set value, and fixed a bug where toggling VDD between 0V and 3.3V caused every alternate configuration to be ignored.
+
 COINES_SDK v2.12 - (01-12-2025)
 
 Updates
