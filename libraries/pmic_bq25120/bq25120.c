@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2026 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -134,7 +134,7 @@ int8_t bq_init(struct bq_dev *dev)
 				rslt |= bq_set_ilim_bat_uvlo(dev, ilim_cfg);
 
 				fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-				fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+				fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
 				fastchrg_cfg.charger_state = BQ_CHARGER_ENABLE;
 				fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
 				rslt |= bq_set_charge_current(dev, fastchrg_cfg);
@@ -366,7 +366,7 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
 
         /*Disable charge to show faults*/
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-        fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+        fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
         fastchrg_cfg.charger_state = BQ_CHARGER_DISABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);
@@ -399,7 +399,7 @@ int8_t bq_get_faults(struct bq_dev *dev, struct fault_mask_reg *state)
 
         /*Enable charge*/
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-        fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+        fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
         fastchrg_cfg.charger_state = BQ_CHARGER_ENABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);
@@ -920,7 +920,7 @@ int8_t bq_charge_enable(struct bq_dev *dev)
 
         /*Disable charge Bit*/
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-        fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+        fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
         fastchrg_cfg.charger_state = BQ_CHARGER_DISABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);
@@ -959,7 +959,7 @@ int8_t bq_charge_enable(struct bq_dev *dev)
 
         /*Enable charge bit*/       
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-        fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+        fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
         fastchrg_cfg.charger_state = BQ_CHARGER_ENABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);  
@@ -978,7 +978,7 @@ int8_t bq_charge_enable(struct bq_dev *dev)
 
         /*Enable charge bit*/       
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-        fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+        fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
         fastchrg_cfg.charger_state = BQ_CHARGER_ENABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);  
@@ -1011,7 +1011,7 @@ int8_t bq_charge_disable(struct bq_dev *dev)
     {
         /*Disable charge bit*/       
         fastchrg_cfg.range = BQ_ICHRG_RANGE_40_300_MA;
-        fastchrg_cfg.code = BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA; // 110 mA + 40 mA = 150 mA (Battery max charging current = 155 mA)
+        fastchrg_cfg.code = BQ_ICHRG_CURRENT_DEFAULT;
         fastchrg_cfg.charger_state = BQ_CHARGER_ENABLE;
         fastchrg_cfg.hz_mode = BQ_HIGH_IMP_MODE_DISABLE;
         rslt |= bq_set_charge_current(dev, fastchrg_cfg);  

@@ -390,6 +390,8 @@ int16_t comm_intf_process_stream_response(uint8_t sensor_id, uint32_t no_ofsampl
 
     int16_t rslt = COINES_SUCCESS;
     uint32_t retry_count = COMM_INTF_STREAMING_RETRY_COUNT;
+    uint32_t max_bytes_to_read;
+    uint32_t available_samples;
 
     if (rsp_buf == NULL)
     {
@@ -427,10 +429,21 @@ int16_t comm_intf_process_stream_response(uint8_t sensor_id, uint32_t no_ofsampl
          * and also the separator gets completely removed, so it's just a continuous data buffer
          */
 
+        /*
+        * Add proper handling when no_ofsamples is less than available samples in the buffer
+        */
+
+        // Calculate maximum bytes to read
+        available_samples = rb_stream_rsp_p[sensor_id - 1]->packetCounter;
+        max_bytes_to_read = no_ofsamples*comm_intf_sensor_info.sensors_byte_count[sensor_id - 1];
+
+        // Only read number of bytes as user requested or less if not enough samples are available
+        uint32_t bytes_to_read = (available_samples < max_bytes_to_read) ? available_samples : max_bytes_to_read;
+
         rsp_buf->buffer_size =
             comm_ringbuffer_read(rb_stream_rsp_p[sensor_id - 1],
                                  rsp_buf->buffer,
-                                 rb_stream_rsp_p[sensor_id - 1]->packetCounter);
+                                 bytes_to_read);
         mutex_unlock(&comm_intf_thread_mutex);
 
         if (rsp_buf->buffer_size > 0)

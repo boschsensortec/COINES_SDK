@@ -143,6 +143,13 @@ int8_t mqueue_add_data(uint8_t queue_id, uint8_t *p_data, uint16_t len)
             return MQUEUE_UNKNOWN_JOB_CALLBACK;
         }
 
+        // Add code for check data length
+        if (len > MQUEUE_PACKET_SIZE)
+        {
+            return MQUEUE_PACKET_TOO_LARGE;
+        }
+
+
         if (is_queue_full(p_mqueue))
         {
             pthread_mutex_unlock(&queue_mutex);

@@ -52,6 +52,7 @@ extern "C" {
 #define MQUEUE_UNKNOWN_JOB_CALLBACK  -3
 #define MQUEUE_INVALID_STATE         -4
 #define MQUEUE_TIMEOUT               -5
+#define MQUEUE_PACKET_TOO_LARGE      -6
 
 /**
  * @brief queue state.

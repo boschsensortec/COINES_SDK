@@ -1,6 +1,6 @@
 /**
  *
- * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2026 Bosch Sensortec GmbH. All rights reserved.
  * BSD-3-Clause
  * Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are met:
@@ -44,12 +44,12 @@ int main(void)
     uint16_t no_of_bytes = 1;
 	uint8_t reg_addr = 0x0;
 
-    /* Power supply VDD   range: 1.71(Typ 1.8) to 3.6(Typ 3.3)*/
+    /* Sensor supported power supply VDD   range: 1.71(Typ 1.8) to 3.6(Typ 3.3)*/
     uint16_t vdd_millivolt[] = {1800, 1900, 2100, 2800, 3000, 3300}; // Test VDD values
-    /* Power supply VDDIO range: 1.2(Typ 1.8) to 3.6(Typ 3.3)*/
+    /* Sensor supported power supply VDDIO range: 1.2(Typ 1.8) to 3.6(Typ 3.3)*/
     uint16_t vddio_millivolt[] = {1800, 1900, 2100, 2800, 3000, 3300}; // Test VDDIO values
 
-    coines_open_comm_intf(COINES_COMM_INTF_USB, NULL); //Wait here till USB is connnected
+    coines_open_comm_intf(COINES_COMM_INTF_USB, NULL); //Wait here till USB is connected
 
     /* Evaluate various VDD ranges while keeping the VDDIO fixed at 3.3V */
     for (uint8_t i = 0; i < sizeof(vdd_millivolt)/sizeof(vdd_millivolt[0]); i++)
@@ -82,6 +82,20 @@ int main(void)
 	
 	    printf("I2C read: Sensor chip ID - 0x%x\n", chip_id);
     }
+
+    coines_set_shuttleboard_vdd_vddio_config(0, 0);
+    coines_delay_msec(500);
+
+    /* Toggle between 3.3V and 0V for VDD and VDDIO */
+    for (uint8_t i = 0; i < 10; i++)
+    {
+        printf("Configuring VDDIO:3.3V and VDD:3.3V\n");
+        coines_set_shuttleboard_vdd_vddio_config(3300, 3300);
+        coines_delay_msec(500);
+        printf("Configuring VDDIO:0.0V and VDD:0.0V\n");
+        coines_set_shuttleboard_vdd_vddio_config(0, 0);
+        coines_delay_msec(500);
+    }   
     
 	(void)coines_set_shuttleboard_vdd_vddio_config(0, 0);
 	coines_delay_msec(100);

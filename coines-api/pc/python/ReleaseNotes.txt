@@ -1,3 +1,10 @@
+COINESPY v1.0.7 - (27-01-2026)
+
+Updates:
+* Coines bridge library backend DLL rebuilt to use the bugfix addressed in 2.12.2
+
+_______________________________________________________________
+
 COINESPY v1.0.6 - (05-09-2025)
 
 Updates:
