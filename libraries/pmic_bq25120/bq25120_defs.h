@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025 Bosch Sensortec GmbH. All rights reserved.
+ * Copyright (c) 2026 Bosch Sensortec GmbH. All rights reserved.
  *
  * BSD-3-Clause
  *
@@ -165,10 +165,11 @@ extern "C" {
 //if range 5mA to 35mA : charging current = 5mA + IchCODE x 1mA
 //else if range 40mA to 300mA : charging current = 40mA + IchCODE x 10mA
 #define BQ_ICHRG_CURRENT_16_160_MA              UINT8_C(1 << 6)
-#define BQ_ICHRG_CURRENT_8_80_MA               UINT8_C(1 << 5)
+#define BQ_ICHRG_CURRENT_8_80_MA                UINT8_C(1 << 5)
 #define BQ_ICHRG_CURRENT_4_40_MA                UINT8_C(1 << 4)
 #define BQ_ICHRG_CURRENT_2_20_MA                UINT8_C(1 << 3)
 #define BQ_ICHRG_CURRENT_1_10_MA                UINT8_C(1 << 2)
+#define BQ_ICHRG_CURRENT_DEFAULT                BQ_ICHRG_CURRENT_8_80_MA | BQ_ICHRG_CURRENT_2_20_MA | BQ_ICHRG_CURRENT_1_10_MA // 80 mA + 20 mA + 10 mA = 110 mA + 40 mA = 150 mA (Battery max charging current = 150 mA)
 //Charger state
 #define BQ_CHARGER_ENABLE                       UINT8_C(0 << 1)
 #define BQ_CHARGER_DISABLE                      UINT8_C(1 << 1)
