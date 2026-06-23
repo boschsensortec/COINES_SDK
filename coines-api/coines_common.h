@@ -88,7 +88,7 @@ void swap_endianness(uint16_t* dest_arr, uint16_t* src_arr, uint16_t count);
 bool is_system_little_endian();
 
 /**
- * @brief Converts a version string (e.g., "v2.12.2") to a 16-bit integer.
+ * @brief Converts a version string (e.g., "v2.12.3") to a 16-bit integer.
  *        Format: (major << 12) | (minor << 6) | patch
  *
  * @param[in]  version_str  Version string in the format "v<major>.<minor>.<patch>"

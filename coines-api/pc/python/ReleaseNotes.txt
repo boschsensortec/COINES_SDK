@@ -1,3 +1,9 @@
+COINESPY v1.0.8 - (03-06-2026)
+
+Updates:
+* Fixed the broken links in documentation.
+_______________________________________________________________
+
 COINESPY v1.0.7 - (27-01-2026)
 
 Updates:

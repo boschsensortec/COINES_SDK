@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "coinespy"
-version = "1.0.7"
+version = "1.0.8"
 authors = [
   { name="Bosch Sensortec GmbH", email="contact@bosch-sensortec.com" },
 ]
@@ -35,4 +35,4 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://www.bosch-sensortec.com/"
-"Source code" = "https://github.com/boschsensortec/COINES"
+"Source code" = "https://github.com/boschsensortec/COINES_SDK"

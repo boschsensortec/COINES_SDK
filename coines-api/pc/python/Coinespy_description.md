@@ -1,9 +1,9 @@
 ### `COINESPY`: Interface for Bosch Sensortec's Engineering Boards.
 `COINESPY` provides a python interface for interacting with the Bosch Sensortec's Engineering boards.
 
-- [GitHub repository](https://github.com/boschsensortec/COINES/tree/main/coines-api/pc/python)
-- [Documentation](https://github.com/boschsensortec/COINES/blob/main/doc/BST-DHW-AN013.pdf)
-- [Examples](https://github.com/boschsensortec/COINES/tree/main/examples/python)
+- [GitHub repository](https://github.com/boschsensortec/COINES_SDK/tree/main/coines-api/pc/python)
+- [Documentation](https://github.com/boschsensortec/COINES_SDK/blob/main/doc/BST-DHW-AN013.pdf)
+- [Examples](https://github.com/boschsensortec/COINES_SDK/tree/main/examples/python)
 
 
 The library offers the following range of functionalities:

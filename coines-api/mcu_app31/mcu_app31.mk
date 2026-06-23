@@ -100,6 +100,7 @@ $(nRF5_SDK_DIR)/modules/nrfx/drivers/src/nrfx_power_clock.c \
 $(nRF5_SDK_DIR)/components/drivers_nrf/usbd/nrf_drv_usbd.c
 
 ifeq ($(USE_FREERTOS),$(filter $(USE_FREERTOS),1))
+	CFLAGS += -DFREERTOS
 	ifeq ($(USE_RTC_CLOCK),$(filter $(USE_RTC_CLOCK),1))
 		C_SRCS_COINES +=\
 		$(nRF5_SDK_DIR)/components/libraries/timer/app_timer_freertos.c

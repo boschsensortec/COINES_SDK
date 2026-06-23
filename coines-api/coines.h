@@ -39,7 +39,7 @@
 #define COINES_H_
 
 #if !defined(COINES_VERSION)
-#define COINES_VERSION  "v2.12.2"
+#define COINES_VERSION  "v2.12.3"
 #endif
 
 /* C++ Guard macro - To prevent name mangling by C++ compiler */
