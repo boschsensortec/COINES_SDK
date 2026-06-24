@@ -1,3 +1,8 @@
+COINES_SDK v2.12.3 - (08-06-2026)
+
+Updates
+* Resolved an issue where data loss occurred at 400 Hz over BLE during the initial connection after a system restart, specifically when FreeRTOS was enabled.
+
 COINES_SDK v2.12.2 - (27-01-2026)
 
 Updates

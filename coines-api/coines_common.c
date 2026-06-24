@@ -160,7 +160,7 @@ bool is_system_little_endian() {
 }
 
 /**
- * @brief Converts a version string (e.g., "v2.12.2") to a 16-bit integer.
+ * @brief Converts a version string (e.g., "v2.12.3") to a 16-bit integer.
  *        Format: (major << 12) | (minor << 6) | patch
  *
  */
