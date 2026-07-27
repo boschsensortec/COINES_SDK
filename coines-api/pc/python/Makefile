@@ -47,12 +47,12 @@ ARCH = $(shell $(CC) -dumpmachine)
 
 ifneq (,$(findstring x86_64,$(ARCH)))
     SUFFIX = 64
+else ifneq (,$(findstring arm64,$(ARCH)))
+    SUFFIX = 64
+else ifneq (,$(findstring aarch64,$(ARCH)))
+    SUFFIX = 64
 else
-    ifneq (,$(findstring arm64,$(ARCH)))
-        SUFFIX = 64
-    else
-        SUFFIX = 32
-    endif
+    SUFFIX = 32
 endif
 
 ifeq ($(OS),Windows_NT)
@@ -80,7 +80,10 @@ ifeq ($(OS),Windows_NT)
 else
     PLATFORM = unix
     DRIVER = LIBUSB_DRIVER
-    ifneq ($(findstring 32,$(SUFFIX)),)
+    # ARM64 doesn't use -m32/-m64 flags
+    ifneq (,$(findstring aarch64,$(ARCH)))
+        CFLAGS += -D PLATFORM_LINUX -fPIC -std=c17 -DAPP_START_ADDRESS=$(APP_START_ADDRESS)
+    else ifneq ($(findstring 32,$(SUFFIX)),)
         CFLAGS += -D PLATFORM_LINUX -fPIC -std=c17 -m32 -DAPP_START_ADDRESS=$(APP_START_ADDRESS)
     else
         CFLAGS += -D PLATFORM_LINUX -fPIC -std=c17 -m64 -DAPP_START_ADDRESS=$(APP_START_ADDRESS)
@@ -104,7 +107,9 @@ else
         endif
         ifeq ($(shell uname -m),arm64)
             HOST_ARCH = arm64
-            LIBPATHS += /opt/homebrew/lib 
+            LIBPATHS += /opt/homebrew/lib
+        else ifeq ($(shell uname -m),aarch64)
+            HOST_ARCH = aarch64
         else ifneq ($(findstring 64,$(SUFFIX)),)
             HOST_ARCH = x64
         else ifneq ($(findstring 32,$(SUFFIX)),)
@@ -205,7 +210,9 @@ ifeq ($(HOST_OS),Darwin)
         SHARED_LIB += coinespy/libcoines_arm_$(SUFFIX).$(EXT)
     else
         SHARED_LIB += coinespy/libcoines_i386_$(SUFFIX).$(EXT)
-    endif    
+    endif
+else ifeq ($(HOST_ARCH),aarch64)
+    SHARED_LIB += coinespy/libcoines_arm_$(SUFFIX).$(EXT)
 else
     SHARED_LIB += coinespy/libcoines_$(SUFFIX).$(EXT)
 endif

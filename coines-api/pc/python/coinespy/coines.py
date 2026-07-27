@@ -446,7 +446,10 @@ class CoinesBoard:
 
     @staticmethod
     def __coines_lib_for_linux(coinespy_path):
-        if 'armv7l' in platform.uname():
+        machine = platform.machine()
+        if machine == 'aarch64' or machine == 'arm64':
+            temp = os.path.join(coinespy_path, 'libcoines_arm_64.so')
+        elif 'armv7l' in platform.uname():
             temp = os.path.join(coinespy_path, 'libcoines_armv7_32.so')
         elif CoinesBoard.__my_os_arch() == '64bit':
             temp = os.path.join(coinespy_path, 'libcoines_64.so')

@@ -13,13 +13,14 @@ To get started with the Bosch Sensortec Application Board, follow these steps:
 2. Install the GCC Toolchain and GNU Make on your system.
 3. Install the USB drivers and libraries for your operating system:
 * Windows: Run the app_board_usb_driver.exe
-* Linux: 
+* Linux (x86_64 and ARM64/aarch64):
   * Install the `libusb-dev` package and `udev` rules:
     * Debian-based distros: Run `sudo apt install libusb-1.0-0-dev`
     * Red Hat-based distros: Run `sudo yum install libusbx-devel`
   * Install the 'libdbus-1-dev' and 'dbus-devel' packages:
     * Debian-based distros: Run `sudo apt install libdbus-1-dev`
-    * Red Hat-based distros: Run `sudo yum install dbus-devel` 
+    * Red Hat-based distros: Run `sudo yum install dbus-devel`
+  * ARM64/aarch64 (e.g., Raspberry Pi 4/5): Also install `libbluetooth-dev` for BLE support 
 * macOS: use Homebrew to install libusb: Run `brew install libusb`
 4. Connect the Bosch Sensortec Application Board to your PC with any sensor shuttle mounted.
 5. Go to any example and run `mingw32-make`(Windows) (or) `make`(Linux & macOS) to compile the source code.
